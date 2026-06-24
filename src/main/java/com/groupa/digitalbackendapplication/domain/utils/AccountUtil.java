@@ -1,18 +1,16 @@
 package com.groupa.digitalbackendapplication.domain.utils;
 
 import java.time.Year;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class AccountUtil {
 
     private String generateAccountNumber(){
-        Year currentYear = Year.now();
-        int min = 100000;
-        int max = 999999;
-        int randNumber = (int) Math.floor(Math.random() * (min - max + 1) + min);
+        String year = String.valueOf(Year.now());
 
-        StringBuilder accountNumber = new StringBuilder();
-        accountNumber.append(currentYear).append(randNumber);
+        int randNumber = ThreadLocalRandom.current()
+                .nextInt(100000, 1000000); // 100000 to 999999
 
-        return accountNumber.toString();
+        return year + randNumber;
     }
 }
