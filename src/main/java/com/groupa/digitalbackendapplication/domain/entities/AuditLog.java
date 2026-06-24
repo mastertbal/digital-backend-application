@@ -1,5 +1,6 @@
 package com.groupa.digitalbackendapplication.domain.entities;
 
+import com.groupa.digitalbackendapplication.domain.enums.ActionType;
 import jakarta.persistence.*;
 import lombok.*;
 

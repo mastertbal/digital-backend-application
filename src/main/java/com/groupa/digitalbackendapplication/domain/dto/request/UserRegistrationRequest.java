@@ -1,4 +1,4 @@
-package com.groupa.digitalbackendapplication.domain.request;
+package com.groupa.digitalbackendapplication.domain.dto.request;
 
 import jakarta.persistence.Column;
 import jakarta.validation.constraints.Email;

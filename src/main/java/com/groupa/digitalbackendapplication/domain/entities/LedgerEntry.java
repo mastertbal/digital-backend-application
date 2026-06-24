@@ -1,5 +1,6 @@
 package com.groupa.digitalbackendapplication.domain.entities;
 
+import com.groupa.digitalbackendapplication.domain.enums.EntryType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
