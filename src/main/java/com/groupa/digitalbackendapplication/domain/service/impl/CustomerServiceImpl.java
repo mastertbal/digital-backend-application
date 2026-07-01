@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.Optional;
@@ -57,7 +58,7 @@ public class CustomerServiceImpl implements CustomerService {
         
         return ResponseWrapper.<AccountCreatedResponse>builder()
                 .data(createAccount)
-                .message("Account Creation Successfull")
+                .message("Account Creation Successful")
                 .statusCode(HttpStatus.CREATED)
                 .build();
     }
@@ -87,6 +88,7 @@ public class CustomerServiceImpl implements CustomerService {
                 .accountStatus(accountStatus)
                 .accountNumber(accountNumber)
                 .accountTier(accountTier)
+                .balance(BigDecimal.ZERO)
                 .build();
         accountRepository.save(account);
         return new AccountCreatedResponse(account.getAccountNumber());
