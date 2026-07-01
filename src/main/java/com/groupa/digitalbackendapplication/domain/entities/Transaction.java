@@ -1,5 +1,7 @@
 package com.groupa.digitalbackendapplication.domain.entities;
 
+import com.groupa.digitalbackendapplication.domain.enums.TransactionStatus;
+import com.groupa.digitalbackendapplication.domain.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
