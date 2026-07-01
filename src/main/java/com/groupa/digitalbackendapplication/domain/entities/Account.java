@@ -1,6 +1,8 @@
 package com.groupa.digitalbackendapplication.domain.entities;
 
 import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
+import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -36,7 +38,15 @@ public class Account {
     @Column(name = "balance")
     private BigDecimal balance;
 
+    @Column(name = "account_tier")
+    @Enumerated(value = EnumType.STRING)
+    private AccountTier accountTier;
+
     @Column(name = "created_at")
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    @CreationTimestamp
+    private LocalDateTime updatedAt;
 }
