@@ -33,7 +33,7 @@ public class Account {
     @Enumerated(value = EnumType.STRING)
     private AccountStatus accountStatus;
 
-    @Column(name = "account_number", unique = true)
+    @Column(name = "account_number", unique = true, nullable = false)
     private String accountNumber;
 
     @Column(name = "balance")
