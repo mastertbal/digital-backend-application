@@ -8,6 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -23,12 +24,6 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "source_id")
-    private UUID sourceId;
-
-    @Column(name = "destination_id")
-    private UUID destinationId;
-
     @Column(name = "transaction_type")
     @Enumerated(value = EnumType.STRING)
     private TransactionType transactionType;
@@ -37,11 +32,13 @@ public class Transaction {
     @Enumerated(value = EnumType.STRING)
     private TransactionStatus transactionStatus;
 
-    @Column(name = "source_account")
-    private String sourceAccount;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_account", referencedColumnName = "account_number")
+    private Account sourceAccount;
 
-    @Column(name = "destination_account")
-    private String destinationAccount;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "destination_account", referencedColumnName = "account_number")
+    private Account destinationAccount;
 
     @Column(name = "amount_transferred")
     private BigDecimal amountTransferred;
@@ -52,4 +49,7 @@ public class Transaction {
     @Column(name = "created_at")
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "transaction", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private List<LedgerEntry> ledgerEntries;
 }
