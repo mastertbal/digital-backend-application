@@ -24,17 +24,15 @@ public class LedgerEntry {
     private UUID id;
 
     @Column(name = "account_id")
-    private UUID account_id;
+    private UUID accountId;
 
-    @Column(name = "transaction_id")
-    private UUID transaction_id;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "transaction_id", nullable = false)
+    private Transaction transaction; //Meant to link back to the transaction table that generated this entry
 
     @Column(name = "entry_type")
     @Enumerated(value = EnumType.STRING)
     private EntryType entryType;
-
-    @Column(name = "balance_after")
-    private BigDecimal balanceAfter;
 
     @Column(name = "amount")
     private BigDecimal amount;
