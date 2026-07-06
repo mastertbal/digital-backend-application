@@ -1,18 +1,19 @@
 package com.groupa.digitalbackendapplication.domain.entities;
 
-import com.groupa.digitalbackendapplication.domain.enums.AccountType;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Entity
+@AllArgsConstructor
+@NoArgsConstructor
+@SuperBuilder
 @Table(name = "customers")
 public class Customer extends User{
 
     @Column(name = "address")
     private String address;
-
-    @Column(name = "account_type")
-    @Enumerated(value = EnumType.STRING)
-    private AccountType accountType;
 
     @Column(name = "nin", unique = true)
     private String nin;

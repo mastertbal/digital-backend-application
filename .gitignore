@@ -32,3 +32,6 @@ build/
 ### VS Code ###
 .vscode/
 /src/main/resources/abdul_dev_application.properties
+/src/main/java/com/groupa/digitalbackendapplication/domain/TestMain.java
+/.env
+/src/main/resources/dev_application.properties
