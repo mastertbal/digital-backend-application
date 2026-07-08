@@ -1,6 +1,7 @@
 package com.groupa.digitalbackendapplication.domain.entities;
 
 import com.groupa.digitalbackendapplication.domain.enums.EntryType;
+import com.groupa.digitalbackendapplication.domain.enums.LedgerEntryStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -23,8 +24,9 @@ public class LedgerEntry {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "account_id")
-    private UUID accountId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id")
+    private Account account;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "transaction_id", nullable = false)
@@ -33,6 +35,10 @@ public class LedgerEntry {
     @Column(name = "entry_type")
     @Enumerated(value = EnumType.STRING)
     private EntryType entryType;
+
+    @Column(name = "status")
+    @Enumerated(value = EnumType.STRING)
+    private LedgerEntryStatus status;
 
     @Column(name = "amount")
     private BigDecimal amount;

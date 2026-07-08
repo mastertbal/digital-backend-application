@@ -1,4 +1,4 @@
-package com.groupa.digitalbackendapplication.domain.repository;
+package com.groupa.digitalbackendapplication.repository;
 
 import com.groupa.digitalbackendapplication.domain.entities.Transaction;
 import org.springframework.data.jpa.repository.JpaRepository;

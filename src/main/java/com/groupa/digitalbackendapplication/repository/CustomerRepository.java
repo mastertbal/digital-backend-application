@@ -1,10 +1,6 @@
-package com.groupa.digitalbackendapplication.domain.repository;
+package com.groupa.digitalbackendapplication.repository;
 
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
-import com.groupa.digitalbackendapplication.domain.entities.User;
-import com.groupa.digitalbackendapplication.domain.enums.Role;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
