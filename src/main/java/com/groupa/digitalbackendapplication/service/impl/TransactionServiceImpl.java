@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -67,7 +67,6 @@ public class TransactionServiceImpl implements TransactionService {
         debit.setAccount(sourceAccount);
         debit.setTransaction(transaction);
         debit.setAmount(payload.amount());
-        debit.setCreatedAt(LocalDateTime.now());
 
         //Ledger entry for credit
         LedgerEntry credit = new LedgerEntry();
@@ -76,7 +75,6 @@ public class TransactionServiceImpl implements TransactionService {
         credit.setAccount(destinationAccount);
         credit.setTransaction(transaction);
         credit.setAmount(payload.amount());
-        credit.setCreatedAt(LocalDateTime.now());
 
         //Save transaction to db
         transaction.getLedgerEntries().add(debit);
@@ -93,6 +91,9 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public ResponseWrapper<TransactionResponse> depositFunds(@Valid CardDetailsRequest payload) {
+        if(payload.depositAmount().compareTo(BigDecimal.valueOf(100)) < 0)
+            throw new BadRequestException("Deposit amount cannot be less than 100");
+
         Account destinationAccount = accountRepository.findById(payload.accountId())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 

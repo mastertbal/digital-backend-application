@@ -4,7 +4,6 @@ import com.groupa.digitalbackendapplication.domain.enums.EntryType;
 import com.groupa.digitalbackendapplication.domain.enums.LedgerEntryStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -32,18 +31,32 @@ public class LedgerEntry {
     @JoinColumn(name = "transaction_id", nullable = false)
     private Transaction transaction; //Meant to link back to the transaction table that generated this entry
 
-    @Column(name = "entry_type")
+    @Column(name = "entry_type", nullable = false)
     @Enumerated(value = EnumType.STRING)
     private EntryType entryType;
 
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     @Enumerated(value = EnumType.STRING)
     private LedgerEntryStatus status;
 
-    @Column(name = "amount")
+    @Column(name = "amount", nullable = false)
     private BigDecimal amount;
 
-    @Column(name = "created_at")
-    @CreationTimestamp
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    private void onCreate(){
+        LocalDateTime now = LocalDateTime.now();
+        createdAt = now;
+        updatedAt = now;
+    }
+
+    @PreUpdate
+    private void onUpdate(){
+        updatedAt = LocalDateTime.now();
+    }
 }
