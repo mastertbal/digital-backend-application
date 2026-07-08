@@ -103,7 +103,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid card. Please use a valid card"));
 
         if(!cardDetails.cardName().equalsIgnoreCase(payloadCardName) || !cardDetails.dateOfExpiry().equals(payload.dateOfExpiry()) || !cardDetails.cvc().equals(payload.cvc())){
-            throw new RuntimeException("Problem occurred. Kindly reconfirm your card details and try again");
+            throw new BadRequestException("Problem occurred. Kindly reconfirm your card details and try again");
         }
 
         //Transaction will either be successful or pending - based on Card used in CardDetailsRepository
