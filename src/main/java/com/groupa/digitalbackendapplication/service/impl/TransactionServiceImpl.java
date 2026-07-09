@@ -7,10 +7,7 @@ import com.groupa.digitalbackendapplication.domain.dto.response.TransactionRespo
 import com.groupa.digitalbackendapplication.domain.entities.Account;
 import com.groupa.digitalbackendapplication.domain.entities.LedgerEntry;
 import com.groupa.digitalbackendapplication.domain.entities.Transaction;
-import com.groupa.digitalbackendapplication.domain.enums.EntryType;
-import com.groupa.digitalbackendapplication.domain.enums.LedgerEntryStatus;
-import com.groupa.digitalbackendapplication.domain.enums.TransactionStatus;
-import com.groupa.digitalbackendapplication.domain.enums.TransactionType;
+import com.groupa.digitalbackendapplication.domain.enums.*;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.domain.entities.CardDetails;
@@ -19,6 +16,7 @@ import com.groupa.digitalbackendapplication.repository.CardDetailsRepository;
 import com.groupa.digitalbackendapplication.repository.TransactionRepository;
 import com.groupa.digitalbackendapplication.service.DepositService;
 import com.groupa.digitalbackendapplication.service.TransactionService;
+import com.groupa.digitalbackendapplication.utils.TransactionRequeryUtil;
 import com.groupa.digitalbackendapplication.utils.TransactionUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -61,24 +63,26 @@ public class TransactionServiceImpl implements TransactionService {
         destinationAccount.setBalance(destinationAccount.getBalance().add(payload.amount()));
 
         //Ledger entry for debit
+        LocalDateTime now = LocalDateTime.now();
+
         LedgerEntry debit = new LedgerEntry();
         debit.setEntryType(EntryType.DEBIT);
         debit.setStatus(LedgerEntryStatus.SETTLED);
         debit.setAccount(sourceAccount);
-        debit.setTransaction(transaction);
         debit.setAmount(payload.amount());
+        debit.setSettledAt(now);
 
         //Ledger entry for credit
         LedgerEntry credit = new LedgerEntry();
         credit.setEntryType(EntryType.CREDIT);
         credit.setStatus(LedgerEntryStatus.SETTLED);
         credit.setAccount(destinationAccount);
-        credit.setTransaction(transaction);
         credit.setAmount(payload.amount());
+        credit.setSettledAt(now);
 
         //Save transaction to db
-        transaction.getLedgerEntries().add(debit);
-        transaction.getLedgerEntries().add(credit);
+        transaction.addLedger(debit);
+        transaction.addLedger(credit);
         transaction = transactionRepository.save(transaction);
 
         return ResponseWrapper.<TransactionResponse>builder()
@@ -128,7 +132,54 @@ public class TransactionServiceImpl implements TransactionService {
         }
     }
 
+    @Override
+    @Transactional
+    public ResponseWrapper<TransactionResponse> requeryTransaction(UUID id) {
+        Transaction transaction = transactionRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Transaction does not exist"));
+
+        if(transaction.getTransactionStatus() != TransactionStatus.PENDING)
+            throw new BadRequestException("Cannot requery a transaction that is not pending");
+
+        //SIMULATING A REQUERY, WHERE TRANSACTION CAN EITHER BE SUCCESSFUL OR DECLINED.
+        transaction.setTransactionStatus(TransactionStatus.valueOf(TransactionRequeryUtil.requeryTransactionStatus()));
+
+        TransactionStatus updatedTransactionStatus = transaction.getTransactionStatus();
+
+        //IF UPDATED TRANSACTION STATUS IS NOW SUCCESSFUL, WE CAN ADD THIS FUNDS TO CUSTOMER'S WALLET
+        if(updatedTransactionStatus == TransactionStatus.SUCCESSFUL){
+            Account account = transaction.getDestinationAccount();
+            account.setBalance(account.getBalance().add(transaction.getAmountTransferred()));
+        }
+
+        List<LedgerEntry> existingLedgerEntries = new ArrayList<>(transaction.getLedgerEntries());
+        existingLedgerEntries.forEach(transaction::removeLedger);
+
+        LocalDateTime updatedLedgerTime = LocalDateTime.now();
+
+        //IT IS EITHER GOING TO BE SUCCESSFUL OR DECLINED NOW
+        for(LedgerEntry ledgerEntry : existingLedgerEntries){
+            if(updatedTransactionStatus == TransactionStatus.SUCCESSFUL){
+                ledgerEntry.setStatus(LedgerEntryStatus.SETTLED);
+                ledgerEntry.setSettledAt(updatedLedgerTime);
+            }else{
+                ledgerEntry.setStatus(LedgerEntryStatus.VOID);
+                ledgerEntry.setVoidedAt(updatedLedgerTime);
+            }
+
+            transaction.addLedger(ledgerEntry);
+        }
+
+        transactionRepository.save(transaction);
+
+        return ResponseWrapper.<TransactionResponse>builder()
+                .message(updatedTransactionStatus == TransactionStatus.SUCCESSFUL ? "Transaction Successful" : "Transaction Failed")
+                .data(buildTransactionResponse(updatedTransactionStatus))
+                .statusCode(HttpStatus.CREATED)
+                .build();
+    }
+
     private TransactionResponse buildTransactionResponse(TransactionStatus transactionStatus){
-        return  new TransactionResponse(transactionStatus);
+        return new TransactionResponse(transactionStatus);
     }
 }

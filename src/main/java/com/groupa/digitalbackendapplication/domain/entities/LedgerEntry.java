@@ -45,6 +45,12 @@ public class LedgerEntry {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "settled_at")
+    private LocalDateTime settledAt;
+
+    @Column(name = "voided_at")
+    private LocalDateTime voidedAt;
+
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 

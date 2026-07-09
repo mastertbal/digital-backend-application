@@ -7,6 +7,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,7 +37,7 @@ public class Transaction {
     private Account sourceAccount;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "destination_account", referencedColumnName = "account_number")
+    @JoinColumn(name = "destination_account", referencedColumnName = "account_number", nullable = false)
     private Account destinationAccount;
 
     @Column(name = "amount_transferred", nullable = false)
@@ -52,10 +53,7 @@ public class Transaction {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "transaction", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    private List<LedgerEntry> ledgerEntries;
-
-    @OneToOne(mappedBy = "transaction", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    private PendingTransaction pendingTransaction;
+    private List<LedgerEntry> ledgerEntries = new ArrayList<>();
 
     @PrePersist
     private void onCreate(){
@@ -67,5 +65,15 @@ public class Transaction {
     @PreUpdate
     private void onUpdate(){
         updatedAt = LocalDateTime.now();
+    }
+
+    public void addLedger(LedgerEntry ledgerEntry){
+        ledgerEntries.add(ledgerEntry);
+        ledgerEntry.setTransaction(this);
+    }
+
+    public void removeLedger(LedgerEntry ledgerEntry){
+        ledgerEntries.remove(ledgerEntry);
+        ledgerEntry.setTransaction(null);
     }
 }
