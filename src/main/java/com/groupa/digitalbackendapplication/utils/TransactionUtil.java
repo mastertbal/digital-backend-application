@@ -6,7 +6,6 @@ import com.groupa.digitalbackendapplication.domain.enums.TransactionStatus;
 import com.groupa.digitalbackendapplication.domain.enums.TransactionType;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 
 public class TransactionUtil {
 
@@ -20,7 +19,6 @@ public class TransactionUtil {
                 .destinationAccount(destinationAccount)
                 .amountTransferred(amount)
                 .description(description)
-                .ledgerEntries(new ArrayList<>())
                 .build();
     }
 }

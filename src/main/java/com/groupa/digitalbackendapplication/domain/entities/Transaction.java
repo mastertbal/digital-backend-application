@@ -52,6 +52,7 @@ public class Transaction {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Builder.Default
     @OneToMany(mappedBy = "transaction", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<LedgerEntry> ledgerEntries = new ArrayList<>();
 
