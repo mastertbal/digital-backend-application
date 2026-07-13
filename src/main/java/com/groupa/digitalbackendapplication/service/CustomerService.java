@@ -1,4 +1,4 @@
-package com.groupa.digitalbackendapplication.domain.service;
+package com.groupa.digitalbackendapplication.service;
 
 import com.groupa.digitalbackendapplication.domain.dto.request.CustomerRegistrationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.AccountCreatedResponse;

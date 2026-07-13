@@ -1,9 +1,9 @@
-package com.groupa.digitalbackendapplication.domain.controller;
+package com.groupa.digitalbackendapplication.controller;
 
 import com.groupa.digitalbackendapplication.domain.dto.request.CustomerRegistrationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.AccountCreatedResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
-import com.groupa.digitalbackendapplication.domain.service.CustomerService;
+import com.groupa.digitalbackendapplication.service.CustomerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;

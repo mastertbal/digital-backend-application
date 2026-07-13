@@ -1,7 +1,8 @@
 package com.groupa.digitalbackendapplication.domain.enums;
 
-public enum TransactionStatus {
-    DECLINED,
+public enum LedgerEntryStatus {
+
+    SETTLED,
     PENDING,
-    SUCCESSFUL
+    VOID
 }

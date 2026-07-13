@@ -1,4 +1,4 @@
-package com.groupa.digitalbackendapplication.domain.utils;
+package com.groupa.digitalbackendapplication.utils;
 
 import org.springframework.stereotype.Component;
 

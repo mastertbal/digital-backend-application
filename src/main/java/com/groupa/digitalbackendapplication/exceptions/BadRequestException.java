@@ -1,4 +1,4 @@
-package com.groupa.digitalbackendapplication.domain.exceptions;
+package com.groupa.digitalbackendapplication.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

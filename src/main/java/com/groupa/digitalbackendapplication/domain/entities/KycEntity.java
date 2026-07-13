@@ -7,7 +7,7 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "account")
+@Table(name = "kyc_entities")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter

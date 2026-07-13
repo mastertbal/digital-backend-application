@@ -1,4 +1,4 @@
-package com.groupa.digitalbackendapplication.domain.exceptions;
+package com.groupa.digitalbackendapplication.exceptions;
 
 import lombok.Builder;
 import lombok.Data;

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "account")
+@Table(name = "accounts")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -33,7 +33,7 @@ public class Account {
     @Enumerated(value = EnumType.STRING)
     private AccountStatus accountStatus;
 
-    @Column(name = "account_number", unique = true)
+    @Column(name = "account_number", unique = true, nullable = false)
     private String accountNumber;
 
     @Column(name = "balance")

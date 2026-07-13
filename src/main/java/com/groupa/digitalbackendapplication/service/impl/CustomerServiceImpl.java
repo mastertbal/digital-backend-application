@@ -1,4 +1,4 @@
-package com.groupa.digitalbackendapplication.domain.service.impl;
+package com.groupa.digitalbackendapplication.service.impl;
 
 import com.groupa.digitalbackendapplication.domain.dto.request.CustomerRegistrationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
@@ -8,11 +8,11 @@ import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
 import com.groupa.digitalbackendapplication.domain.enums.Gender;
 import com.groupa.digitalbackendapplication.domain.enums.Role;
-import com.groupa.digitalbackendapplication.domain.exceptions.BadRequestException;
-import com.groupa.digitalbackendapplication.domain.repository.AccountRepository;
-import com.groupa.digitalbackendapplication.domain.repository.CustomerRepository;
-import com.groupa.digitalbackendapplication.domain.service.CustomerService;
-import com.groupa.digitalbackendapplication.domain.utils.AccountUtil;
+import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
+import com.groupa.digitalbackendapplication.repository.AccountRepository;
+import com.groupa.digitalbackendapplication.repository.CustomerRepository;
+import com.groupa.digitalbackendapplication.service.CustomerService;
+import com.groupa.digitalbackendapplication.utils.AccountUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
