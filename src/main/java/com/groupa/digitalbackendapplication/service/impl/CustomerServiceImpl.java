@@ -75,8 +75,8 @@ public class CustomerServiceImpl implements CustomerService {
                 .gender(gender)
                 .dateOfBirth(dateOfBirth)
                 .address(address)
-                .bvn(bvn != null && bvn.isBlank() ? null : bvn)
-                .nin(nin != null && nin.isBlank() ? null : nin)
+                .bvn(bvn)
+                .nin(nin)
                 .build();
         Customer savedCustomer = customerRepository.save(customer);
         return new SavedCustomerResponse(savedCustomer.getId());
