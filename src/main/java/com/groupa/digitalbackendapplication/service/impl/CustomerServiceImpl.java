@@ -16,6 +16,7 @@ import com.groupa.digitalbackendapplication.utils.AccountUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -31,6 +32,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
     private final AccountUtil accountUtil;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public ResponseWrapper<AccountCreatedResponse> createPersonalAccount(CustomerRegistrationRequest payload) {
@@ -63,13 +65,43 @@ public class CustomerServiceImpl implements CustomerService {
                 .build();
     }
 
+    public ResponseWrapper<AccountCreatedResponse> createAdminAccount(CustomerRegistrationRequest payload) {
+        Role userRole = Role.ADMIN;
+        AccountStatus accountStatus = AccountStatus.ACTIVE;
+        AccountTier accountTier = AccountTier.TIER_1;
+
+        if(validateAge(payload.getDateOfBirth())) throw
+        new BadRequestException("User must be at least 18 years old");
+
+        if(validatePhoneNumber(payload.getPhoneNumber())) throw
+                new BadRequestException("Error occurred: please provide another phone number");
+
+        Optional<Customer> customerOptional = customerRepository.findByEmail(payload.getEmail());
+        if(customerOptional.isPresent()) throw new BadRequestException("Error occurred: please provide another email");
+
+        SavedCustomerResponse userResponse = buildCustomerDetails(
+                payload.getFirstName(), payload.getLastName(), payload.getEmail(), payload.getPassword(),
+                payload.getPhoneNumber(), userRole, payload.getGender(), payload.getDateOfBirth(), payload.getAddress(), payload.getNin(), payload.getBvn());
+
+        String accountNumber = accountUtil.generateAccountNumber();
+        //Continue account creation
+
+        AccountCreatedResponse createAccount = buildAccount(userResponse.getCustomerId(), accountStatus, accountNumber, accountTier);
+
+        return ResponseWrapper.<AccountCreatedResponse>builder()
+                .data(createAccount)
+                .message("Account Creation Successful")
+                .statusCode(HttpStatus.CREATED)
+                .build();
+    }
+
     private SavedCustomerResponse buildCustomerDetails(String firstName, String lastName, String email, String password, String phoneNumber, Role role, Gender gender, LocalDate dateOfBirth, String address, String nin, String bvn){
 
         Customer customer =Customer.builder()
                 .firstName(firstName)
                 .lastName(lastName)
                 .email(email)
-                .password(password)
+                .password(passwordEncoder.encode(password))
                 .phoneNumber(phoneNumber)
                 .role(role)
                 .gender(gender)

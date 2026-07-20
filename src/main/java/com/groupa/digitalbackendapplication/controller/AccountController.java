@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/account")
 @RequiredArgsConstructor
 public class AccountController {
 
@@ -21,5 +21,10 @@ public class AccountController {
     @PostMapping("/create-personal-account")
     ResponseWrapper<AccountCreatedResponse> createPersonalAccount(@RequestBody @Valid CustomerRegistrationRequest payload){
         return customerService.createPersonalAccount(payload);
+    }
+
+    @PostMapping("/create-admin-account")
+    ResponseWrapper<AccountCreatedResponse> createAdminAccount(@RequestBody @Valid CustomerRegistrationRequest payload){
+        return customerService.createAdminAccount(payload);
     }
 }
