@@ -24,7 +24,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(csrfConfigurer -> csrfConfigurer.disable())
                 .authorizeHttpRequests(reqConfigurer ->
-                        reqConfigurer.requestMatchers("/api/auth/**", "/api/account/**").permitAll()
+                        reqConfigurer.requestMatchers("/api/auth/**", "/api/account/create-personal-account", "/api/account/create-admin-account").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(sessionConfigurer -> sessionConfigurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

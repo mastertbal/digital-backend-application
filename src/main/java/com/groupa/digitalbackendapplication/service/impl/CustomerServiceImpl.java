@@ -8,14 +8,18 @@ import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
 import com.groupa.digitalbackendapplication.domain.enums.Gender;
 import com.groupa.digitalbackendapplication.domain.enums.Role;
+import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
+import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.CustomerService;
 import com.groupa.digitalbackendapplication.utils.AccountUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -65,6 +69,7 @@ public class CustomerServiceImpl implements CustomerService {
                 .build();
     }
 
+    @Override
     public ResponseWrapper<AccountCreatedResponse> createAdminAccount(CustomerRegistrationRequest payload) {
         Role userRole = Role.ADMIN;
         AccountStatus accountStatus = AccountStatus.ACTIVE;
@@ -92,6 +97,38 @@ public class CustomerServiceImpl implements CustomerService {
                 .data(createAccount)
                 .message("Account Creation Successful")
                 .statusCode(HttpStatus.CREATED)
+                .build();
+    }
+
+    @Override
+    public Response<CustomerDto> getUserProfile() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) throw new BadRequestException("User profile not available");
+
+        AuthUser userDetails = (AuthUser) authentication.getPrincipal();
+        Optional<Customer> customerOptional = customerRepository.findByEmail(userDetails.getUsername());
+
+        Customer customer = customerOptional.get();
+
+        CustomerDto customerDto = CustomerDto.builder()
+                .id(customer.getId())
+                .firstName(customer.getFirstName())
+                .lastName(customer.getLastName())
+                .email(customer.getEmail())
+                .phoneNumber(customer.getPhoneNumber())
+                .gender(customer.getGender())
+                .dateOfBirth(customer.getDateOfBirth())
+                .role(customer.getRole())
+                .address(customer.getAddress())
+                .build();
+
+        if (customerDto.getNin() != null) customerDto.setNin(customerDto.getNin());
+        if (customerDto.getBvn() != null) customerDto.setBvn(customerDto.getBvn());
+
+        return Response.<CustomerDto>builder()
+                .data(customerDto)
+                .message("Success")
+                .statusCode(HttpStatus.OK.value())
                 .build();
     }
 

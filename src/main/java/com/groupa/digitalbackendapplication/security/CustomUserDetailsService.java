@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.lang.module.ResolutionException;
@@ -21,6 +22,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         com.groupa.digitalbackendapplication.domain.entities.Customer customer = customerRepository.findByEmail(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+
         return AuthUser.builder()
                 .customer(customer)
                 .build();

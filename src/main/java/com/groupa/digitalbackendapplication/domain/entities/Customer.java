@@ -2,6 +2,7 @@ package com.groupa.digitalbackendapplication.domain.entities;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
@@ -10,6 +11,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @SuperBuilder
 @Table(name = "customers")
+@Getter
 public class Customer extends User{
 
     @Column(name = "address")

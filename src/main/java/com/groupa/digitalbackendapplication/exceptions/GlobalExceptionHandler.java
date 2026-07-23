@@ -30,9 +30,9 @@ public class GlobalExceptionHandler {
 
         ErrorResponse response = ErrorResponse.builder()
                 .message(e.getMessage())
-                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .statusCode(HttpStatus.FORBIDDEN.value())
                 .build();
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

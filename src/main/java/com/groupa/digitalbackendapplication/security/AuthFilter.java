@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.BadRequestException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,6 +37,15 @@ public class AuthFilter extends OncePerRequestFilter {
             String token = getTokenFromRequest(request);
 
             if (token != null) {
+
+                if (request.getServletPath().equals("/api/auth/new-access-token")) {
+                    filterChain.doFilter(request, response);
+                }
+
+                if (tokenService.containsRefreshToken(token)) {
+                    throw new BadRequestException("Invalid token");
+                }
+
                 String email = tokenService.getUsernameFromToken(token);
 
                 UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
@@ -47,7 +57,13 @@ public class AuthFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                 }
             }
-        } catch (Exception e) {
+        }catch (BadRequestException e) {
+            log.error("Use the right access token");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.getWriter().write("Invalid token");
+            return;
+        }
+        catch (Exception e) {
             log.error("Exception occurred while processing token");
             throw new BadCredentialsException(e.getMessage());
         }
