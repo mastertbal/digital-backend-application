@@ -2,14 +2,13 @@ package com.groupa.digitalbackendapplication.controller;
 
 import com.groupa.digitalbackendapplication.domain.dto.request.CustomerRegistrationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.AccountCreatedResponse;
+import com.groupa.digitalbackendapplication.domain.dto.response.CustomerDto;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
+import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.service.CustomerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/account")
@@ -19,12 +18,17 @@ public class AccountController {
     private final CustomerService customerService;
 
     @PostMapping("/create-personal-account")
-    ResponseWrapper<AccountCreatedResponse> createPersonalAccount(@RequestBody @Valid CustomerRegistrationRequest payload){
+    public ResponseWrapper<AccountCreatedResponse> createPersonalAccount(@RequestBody @Valid CustomerRegistrationRequest payload){
         return customerService.createPersonalAccount(payload);
     }
 
     @PostMapping("/create-admin-account")
-    ResponseWrapper<AccountCreatedResponse> createAdminAccount(@RequestBody @Valid CustomerRegistrationRequest payload){
+    public ResponseWrapper<AccountCreatedResponse> createAdminAccount(@RequestBody @Valid CustomerRegistrationRequest payload){
         return customerService.createAdminAccount(payload);
+    }
+
+    @GetMapping(path = "/user-profile")
+    public Response<CustomerDto> getUserProfile() {
+        return customerService.getUserProfile();
     }
 }

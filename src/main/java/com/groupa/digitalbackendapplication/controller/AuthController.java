@@ -4,6 +4,8 @@ import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
 import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
 import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,5 +26,10 @@ public class AuthController {
             @Valid @RequestBody LoginRequest loginRequest
     ){
         return ResponseEntity.ok(authService.loginUser(loginRequest));
+    }
+
+    @PostMapping("/new-access-token")
+    public ResponseEntity<Response<LoginResponse>> getNewAccessToken(HttpServletRequest request, HttpServletResponse response){
+        return ResponseEntity.ok( authService.getNewAccessToken(request, response) );
     }
 }
