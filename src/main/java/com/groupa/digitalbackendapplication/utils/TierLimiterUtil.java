@@ -40,11 +40,14 @@ public class TierLimiterUtil {
         return newTotal;
     }
 
-    public void recordDailyTransferTotal(String accountNumber, BigDecimal newTotal) {
+    public void recordDailyTransferTotal(String accountNumber, BigDecimal currentAmountTransferred) {
         LocalDate today = LocalDate.now();
         DailyTransferTotal record = dailyTransferTotalRepository
                 .findForUpdate(accountNumber, today)
                 .orElseGet(() -> new DailyTransferTotal(accountNumber, today, BigDecimal.ZERO));
+
+        BigDecimal newTotal;
+        newTotal = record.getTotalAmount().add(currentAmountTransferred);
         record.setTotalAmount(newTotal);
         dailyTransferTotalRepository.save(record);
     }

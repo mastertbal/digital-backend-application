@@ -106,7 +106,14 @@ public class CustomerServiceImpl implements CustomerService {
         if (authentication == null) throw new BadRequestException("User profile not available");
 
         AuthUser userDetails = (AuthUser) authentication.getPrincipal();
-        Optional<Customer> customerOptional = customerRepository.findByEmail(userDetails.getUsername());
+
+        return getUserProfileById(userDetails.getCustomer().getId());
+    }
+
+    @Override
+    public Response<CustomerDto> getUserProfileById(UUID userId) {
+
+        Optional<Customer> customerOptional = customerRepository.findById(userId);
 
         Customer customer = customerOptional.get();
 
