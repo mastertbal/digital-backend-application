@@ -15,11 +15,10 @@ import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.CustomerService;
 import com.groupa.digitalbackendapplication.utils.AccountUtil;
+import com.groupa.digitalbackendapplication.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -37,6 +36,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final AccountRepository accountRepository;
     private final AccountUtil accountUtil;
     private final PasswordEncoder passwordEncoder;
+    private final SecurityUtil securityUtil;
 
     @Override
     public ResponseWrapper<AccountCreatedResponse> createPersonalAccount(CustomerRegistrationRequest payload) {
@@ -102,12 +102,9 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public Response<CustomerDto> getUserProfile() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) throw new BadRequestException("User profile not available");
+        AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
 
-        AuthUser userDetails = (AuthUser) authentication.getPrincipal();
-
-        return getUserProfileById(userDetails.getCustomer().getId());
+        return getUserProfileById(loggedInUser.getCustomer().getId());
     }
 
     @Override
