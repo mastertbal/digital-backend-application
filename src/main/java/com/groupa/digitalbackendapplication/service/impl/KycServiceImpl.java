@@ -133,7 +133,7 @@ public class KycServiceImpl implements KycService {
 
     private void buildCustomer(Customer customer, KycDocumentType documentType, String submittedValue){
         if(documentType.equals(KycDocumentType.NIN)){
-            customer.setNin(submittedValue);
+            customer.setNin(encoder.encode(submittedValue));
             customer.setUpdatedAt(LocalDateTime.now());
         }
         else if (documentType.equals(KycDocumentType.BVN)){
