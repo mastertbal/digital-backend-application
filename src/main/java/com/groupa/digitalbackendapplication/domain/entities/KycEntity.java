@@ -1,9 +1,13 @@
 package com.groupa.digitalbackendapplication.domain.entities;
 
-import com.groupa.digitalbackendapplication.domain.enums.SubmissionStatus;
+import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
+import com.groupa.digitalbackendapplication.domain.enums.KycDocumentType;
+import com.groupa.digitalbackendapplication.domain.enums.KycStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -22,13 +26,31 @@ public class KycEntity {
     @Column(name = "customer_id")
     private UUID customerId;
 
-    @Column(name = "bvn")
-    private String bvn;
+    @Column(name = "account_id")
+    private UUID accountId;
 
-    @Column(name = "nin")
-    private String nin;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "document_type")
+    private KycDocumentType documentType;
 
-    @Column(name = "submission_status")
-    @Enumerated(value = EnumType.STRING)
-    private SubmissionStatus submissionStatus;
+    @Column(name = "submitted_value")
+    private String submittedValue;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private KycStatus status;
+
+    private String rejectionReason;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "upgraded_to")
+    private AccountTier resultingTier;
+
+    @CreationTimestamp
+    @Column(name = "submitted_at")
+    private LocalDateTime submittedAt;
+
+    @Column(name = "resolved_at")
+    private LocalDateTime resolvedAt;
+
 }
