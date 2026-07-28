@@ -1,0 +1,138 @@
+package com.groupa.digitalbackendapplication.service.impl;
+
+import com.groupa.digitalbackendapplication.domain.dto.response.CustomerDto;
+import com.groupa.digitalbackendapplication.domain.entities.Customer;
+import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
+import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
+import com.groupa.digitalbackendapplication.domain.response.Response;
+import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
+import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
+import com.groupa.digitalbackendapplication.repository.CustomerRepository;
+import com.groupa.digitalbackendapplication.security.AuthUser;
+import com.groupa.digitalbackendapplication.security.CustomUserDetailsService;
+import com.groupa.digitalbackendapplication.security.TokenService;
+import com.groupa.digitalbackendapplication.service.AuthService;
+import com.groupa.digitalbackendapplication.service.RefreshSessionService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.json.GsonBuilderUtils;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class AuthServiceImpl implements AuthService {
+
+    private final CustomerRepository customerRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final TokenService tokenService;
+    private final CustomUserDetailsService customUserDetailsService;
+    private final RefreshSessionService refreshSessionService;
+
+    @Override
+    public Response<LoginResponse> loginUser(LoginRequest loginRequest) {
+        String email = loginRequest.getEmail();
+        String password = loginRequest.getPassword();
+
+        AuthUser authUser = (AuthUser) customUserDetailsService.loadUserByUsername(email);
+
+        if (!passwordEncoder.matches(password, authUser.getPassword())) {
+            throw new BadRequestException("Password does not match");
+        }
+
+        String role = authUser.getCustomer().getRole().name();
+
+        String token = tokenService.generateToken(authUser.getUsername());
+        String refreshToken = tokenService.generateRefreshToken(authUser.getUsername());
+
+        String sessionId = LocalDateTime.now().toString();
+
+        refreshSessionService.createLoginSession(sessionId, authUser.getCustomer().getId());
+
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(authUser, null, authUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+
+        LoginResponse loginResponse = LoginResponse.builder()
+                .role(role)
+                .accessToken(token)
+                .refreshToken(refreshToken)
+                .build();
+
+        return Response.<LoginResponse>builder()
+                .statusCode(HttpStatus.OK.value())
+                .message("Login successful")
+                .data(loginResponse)
+                .build();
+    }
+
+    public Response<LoginResponse> getNewAccessToken(HttpServletRequest request, HttpServletResponse response) {
+        // get the refresh token
+        String refreshHeader = request.getHeader("Authorization");
+        if (refreshHeader == null || !refreshHeader.startsWith("Bearer ")) {
+            throw new ResourceNotFoundException("Authorization header missing");
+        }
+
+        // get the refresh token
+        String refreshToken = refreshHeader.substring(7);
+
+        // extract the username
+        String username = tokenService.getUsernameFromToken(refreshToken);
+
+        // check if the user exist
+        AuthUser userDetails = (AuthUser) customUserDetailsService.loadUserByUsername(username);
+
+        // get customer from repository
+        Customer customer = customerRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found") );
+
+        // if logout, refresh session should be null, thus a new refresh token should be gotten by login
+        String refreshSession = refreshSessionService.getUserSession(customer.getId());
+
+        if (refreshSession == null) throw new BadRequestException("Refresh token invalid. Please login to get a new one");
+
+        // check if refresh token is valid
+        if (tokenService.validateRefreshToken(refreshToken)) {
+            // invalidate previous session
+            refreshSessionService.invalidateLoginSession(customer.getId());
+            System.out.println("Invalidate refresh session called");
+
+            // generate new session id
+            String sessionId = LocalDateTime.now().toString();
+
+            // generate new access token
+            String newAccessToken = tokenService.generateToken(customer.getEmail());
+            // generate new refresh token
+            String newRefreshToken = tokenService.generateRefreshToken(customer.getEmail());
+
+            // save new session id into user login session table
+            refreshSessionService.createLoginSession(sessionId, customer.getId());
+            System.out.println("Refresh session created");
+
+            LoginResponse loginResponse = LoginResponse.builder()
+                    .accessToken(newAccessToken)
+                    .refreshToken(newRefreshToken)
+                    .role(customer.getRole().name())
+                    .build();
+
+            return Response.<LoginResponse>builder()
+                    .statusCode(HttpStatus.OK.value())
+                    .message("Login successful")
+                    .data(loginResponse)
+                    .build();
+        } else {
+            System.out.println(tokenService.validateRefreshToken(refreshToken) + ". Refresh token is invalid");
+        }
+        throw new BadRequestException("Something went wrong");
+    }
+}

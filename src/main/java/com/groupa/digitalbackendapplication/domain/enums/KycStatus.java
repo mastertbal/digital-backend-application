@@ -1,8 +1,7 @@
 package com.groupa.digitalbackendapplication.domain.enums;
 
-public enum SubmissionStatus {
+public enum KycStatus {
     PENDING,
-    SUBMITTED,
     APPROVED,
     REJECTED
 }

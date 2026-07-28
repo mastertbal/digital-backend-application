@@ -1,5 +1,6 @@
 package com.groupa.digitalbackendapplication.domain.enums;
 
-public enum ActionType {
-
+public enum KycDocumentType {
+    NIN,
+    BVN
 }
