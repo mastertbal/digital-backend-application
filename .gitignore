@@ -38,3 +38,4 @@ build/
 
 .env
 
+/src/main/java/com/groupa/digitalbackendapplication/play.java

@@ -1,10 +1,12 @@
 package com.groupa.digitalbackendapplication.domain.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.jspecify.annotations.Nullable;
+
+import java.time.LocalDateTime;
 
 @Entity
 @AllArgsConstructor
@@ -12,6 +14,8 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @Table(name = "customers")
 @Getter
+@Setter
+@ToString
 public class Customer extends User{
 
     @Column(name = "address")
@@ -22,4 +26,8 @@ public class Customer extends User{
 
     @Column(name = "bvn", unique = true)
     private String bvn;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }
