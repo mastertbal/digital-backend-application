@@ -12,12 +12,12 @@ import lombok.experimental.SuperBuilder;
 @Table(name = "customers")
 public class Customer extends User{
 
-    @Column(name = "address")
+    @Column(name = "address", nullable = false)
     private String address;
 
-    @Column(name = "nin", unique = true)
+    @Column(name = "nin", unique = true, nullable = false)
     private String nin;
 
-    @Column(name = "bvn", unique = true)
+    @Column(name = "bvn", unique = true, nullable = false)
     private String bvn;
 }

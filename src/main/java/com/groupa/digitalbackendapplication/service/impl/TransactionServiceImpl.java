@@ -4,15 +4,15 @@ import com.groupa.digitalbackendapplication.domain.dto.request.CardDetailsReques
 import com.groupa.digitalbackendapplication.domain.dto.request.TransferFundsRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
 import com.groupa.digitalbackendapplication.domain.dto.response.TransactionResponse;
-import com.groupa.digitalbackendapplication.domain.entities.Account;
-import com.groupa.digitalbackendapplication.domain.entities.LedgerEntry;
-import com.groupa.digitalbackendapplication.domain.entities.Transaction;
+import com.groupa.digitalbackendapplication.domain.entities.*;
 import com.groupa.digitalbackendapplication.domain.enums.*;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
-import com.groupa.digitalbackendapplication.domain.entities.CardDetails;
+import com.groupa.digitalbackendapplication.notification.EmailDetails;
+import com.groupa.digitalbackendapplication.notification.EmailService;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.CardDetailsRepository;
+import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.repository.TransactionRepository;
 import com.groupa.digitalbackendapplication.service.DepositService;
 import com.groupa.digitalbackendapplication.service.TransactionService;
@@ -20,6 +20,7 @@ import com.groupa.digitalbackendapplication.utils.TransactionRequeryUtil;
 import com.groupa.digitalbackendapplication.utils.TransactionUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,14 +33,17 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Validated
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final CardDetailsRepository cardDetailsRepository;
+    private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
     private final DepositService depositService;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -85,6 +89,10 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.addLedger(credit);
         transaction = transactionRepository.save(transaction);
 
+        //Send debit alert to sender while credit alert to receiver
+        sendDebitAlert(sourceAccount, payload.amount(), now);
+        sendCreditAlert(destinationAccount, payload.amount(), now);
+
         return ResponseWrapper.<TransactionResponse>builder()
                 .data(buildTransactionResponse(transaction.getTransactionStatus()))
                 .message("Transaction successful")
@@ -107,13 +115,16 @@ public class TransactionServiceImpl implements TransactionService {
         CardDetails cardDetails = cardDetailsRepository.findByCardNumber(payloadCardNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid card. Please use a valid card"));
 
-        if(!cardDetails.cardName().equalsIgnoreCase(payloadCardName) || !cardDetails.dateOfExpiry().equals(payload.dateOfExpiry()) || !cardDetails.cvc().equals(payload.cvc())){
+        if(!cardDetails.cardName()
+                .equalsIgnoreCase(payloadCardName) || !cardDetails.dateOfExpiry().equals(payload.dateOfExpiry()) || !cardDetails.cvc().equals(payload.cvc())){
             throw new BadRequestException("Problem occurred. Kindly reconfirm your card details and try again");
         }
 
         //Transaction will either be successful or pending - based on Card used in CardDetailsRepository
         if(cardDetails.transactionStatus() == TransactionStatus.SUCCESSFUL){
             Transaction savedTransaction = depositService.buildSuccessfulDeposit(destinationAccount, payload);
+
+            sendCreditAlert(destinationAccount, payload.depositAmount(), LocalDateTime.now());
 
             return ResponseWrapper.<TransactionResponse>builder()
                     .data(buildTransactionResponse(savedTransaction.getTransactionStatus()))
@@ -150,6 +161,8 @@ public class TransactionServiceImpl implements TransactionService {
         if(updatedTransactionStatus == TransactionStatus.SUCCESSFUL){
             Account account = transaction.getDestinationAccount();
             account.setBalance(account.getBalance().add(transaction.getAmountTransferred()));
+
+            sendCreditAlert(account, transaction.getAmountTransferred(), LocalDateTime.now());
         }
 
         List<LedgerEntry> existingLedgerEntries = new ArrayList<>(transaction.getLedgerEntries());
@@ -177,6 +190,54 @@ public class TransactionServiceImpl implements TransactionService {
                 .data(buildTransactionResponse(updatedTransactionStatus))
                 .statusCode(HttpStatus.CREATED)
                 .build();
+    }
+
+    private void sendDebitAlert(Account account, BigDecimal amount, LocalDateTime date){
+        try {
+            Customer customer = getCustomer(account.getOwnerId());
+
+            String message = "Dear " + customer.getFirstName() + ",\n\n" +
+                    "Your account has been debited with NGN " + amount + "\n" +
+                    "Account Number: " + account.getAccountNumber() + "\n" +
+                    "Date: " + date + "\n" +
+                    "Your available balance is " + account.getBalance() + "\n\n" +
+                    "Thank you for banking with us!";
+
+            EmailDetails emailDetails = EmailDetails.builder()
+                    .recipient(customer.getEmail())
+                    .subject("Debit Alert - " + account.getAccountNumber())
+                    .messageBody(message)
+                    .build();
+
+            emailService.sendEmail(emailDetails);
+
+        } catch (Exception e){
+            log.error("Debit alert failed for account {}: {}", account.getAccountNumber(), e.getMessage());
+        }
+    }
+    private void sendCreditAlert(Account account, BigDecimal amount, LocalDateTime date){
+        try{
+            Customer customer = getCustomer(account.getOwnerId());
+            String message = "Dear " + customer.getFirstName() + ",\n\n" +
+                    "Your account has been credited with NGN " + amount + "\n" +
+                    "Date: " + date + "\n" +
+                    "Your available balance is " + account.getBalance() + "\n\n" +
+                    "Thank you for banking with us!";
+
+            EmailDetails emailDetails = EmailDetails.builder()
+                    .recipient(customer.getEmail())
+                    .subject("Credit Alert - " + account.getAccountNumber())
+                    .messageBody(message)
+                    .build();
+            emailService.sendEmail(emailDetails);
+
+        } catch(Exception e){
+            log.error("Credit alert failed for account {}: {}", account.getAccountNumber(), e.getMessage());
+        }
+    }
+
+    private Customer getCustomer(UUID ownerId) {
+        return customerRepository.findById(ownerId).orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
     }
 
     private TransactionResponse buildTransactionResponse(TransactionStatus transactionStatus){
