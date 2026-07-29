@@ -4,12 +4,8 @@ import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
-import java.util.UUID;
 
 public record CardDetailsRequest(
-        @NotNull(message = "accountId is a required field")
-        UUID accountId,
-
         @NotBlank(message = "cardNumber is a required field")
         String cardNumber,
 

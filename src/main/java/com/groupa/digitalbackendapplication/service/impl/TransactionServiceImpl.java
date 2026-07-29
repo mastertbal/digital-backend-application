@@ -4,18 +4,17 @@ import com.groupa.digitalbackendapplication.domain.dto.request.CardDetailsReques
 import com.groupa.digitalbackendapplication.domain.dto.request.TransferFundsRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
 import com.groupa.digitalbackendapplication.domain.dto.response.TransactionResponse;
-import com.groupa.digitalbackendapplication.domain.entities.Account;
-import com.groupa.digitalbackendapplication.domain.entities.LedgerEntry;
-import com.groupa.digitalbackendapplication.domain.entities.Transaction;
+import com.groupa.digitalbackendapplication.domain.entities.*;
 import com.groupa.digitalbackendapplication.domain.enums.*;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
-import com.groupa.digitalbackendapplication.domain.entities.CardDetails;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.CardDetailsRepository;
 import com.groupa.digitalbackendapplication.repository.TransactionRepository;
+import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.DepositService;
 import com.groupa.digitalbackendapplication.service.TransactionService;
+import com.groupa.digitalbackendapplication.utils.SecurityUtil;
 import com.groupa.digitalbackendapplication.utils.TierLimiterUtil;
 import com.groupa.digitalbackendapplication.utils.TransactionRequeryUtil;
 import com.groupa.digitalbackendapplication.utils.TransactionUtil;
@@ -42,12 +41,16 @@ public class TransactionServiceImpl implements TransactionService {
     private final AccountRepository accountRepository;
     private final DepositService depositService;
     private final TierLimiterUtil tierLimiterUtil;
+    private final SecurityUtil securityUtil;
 
     @Override
     @Transactional
     public ResponseWrapper<TransactionResponse> transferFunds(@Valid TransferFundsRequest payload) {
-        Account sourceAccount= accountRepository.findById(payload.accountId())
+        AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
+        Customer customer = loggedInUser.getCustomer();
+        Account sourceAccount = accountRepository.findByOwnerId(customer.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+
 
         //Does destination Account exists
         Account destinationAccount = accountRepository.findByAccountNumber(payload.destinationAccount().trim())
@@ -107,7 +110,9 @@ public class TransactionServiceImpl implements TransactionService {
         if(payload.depositAmount().compareTo(BigDecimal.valueOf(100)) < 0)
             throw new BadRequestException("Deposit amount cannot be less than 100");
 
-        Account destinationAccount = accountRepository.findById(payload.accountId())
+        AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
+        Customer customer = loggedInUser.getCustomer();
+        Account destinationAccount = accountRepository.findByOwnerId(customer.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         String payloadCardNumber = payload.cardNumber().trim();
