@@ -3,15 +3,19 @@ package com.groupa.digitalbackendapplication.service;
 import com.groupa.digitalbackendapplication.domain.dto.request.CardDetailsRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.TransferFundsRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
-import com.groupa.digitalbackendapplication.domain.dto.response.TransactionResponse;
+import com.groupa.digitalbackendapplication.domain.dto.response.TransactionHistoryResponseDto;
+import com.groupa.digitalbackendapplication.domain.dto.response.TransactionStatusResponse;
 import jakarta.validation.Valid;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface TransactionService {
-    ResponseWrapper<TransactionResponse> transferFunds(@Valid TransferFundsRequest payload);
+    ResponseWrapper<TransactionStatusResponse> transferFunds(@Valid TransferFundsRequest payload);
 
-    ResponseWrapper<TransactionResponse> depositFunds(@Valid CardDetailsRequest payload);
+    ResponseWrapper<TransactionStatusResponse> depositFunds(@Valid CardDetailsRequest payload);
 
-    ResponseWrapper<TransactionResponse> requeryTransaction(UUID id);
+    ResponseWrapper<TransactionStatusResponse> requeryTransaction(UUID id);
+
+    ResponseWrapper<List<TransactionHistoryResponseDto>> getAllTransactionHistory();
 }
