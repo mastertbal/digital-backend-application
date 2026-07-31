@@ -16,10 +16,10 @@ import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.repository.KycEntityRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.KycService;
+import com.groupa.digitalbackendapplication.utils.EncryptionUtil;
 import com.groupa.digitalbackendapplication.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -35,7 +35,7 @@ public class KycServiceImpl implements KycService {
     private final KycEntityRepository kycEntityRepository;
     private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
-    private final PasswordEncoder encoder;
+    private final EncryptionUtil encryptionUtil;
 
     private static final Pattern ELEVEN_DIGITS = Pattern.compile("\\d{11}");
 
@@ -89,22 +89,21 @@ public class KycServiceImpl implements KycService {
 
         String trimmed = submittedValue.trim();
 
-        switch (documentType) {
-            case NIN:
+        return switch (documentType) {
+            case NIN -> {
                 if (!ELEVEN_DIGITS.matcher(trimmed).matches()) {
-                    return Optional.of("Invalid NIN format: expected 11 digits");
+                    yield Optional.of("Invalid NIN format: expected 11 digits");
                 }
-                return Optional.empty();
-
-            case BVN:
+                yield Optional.empty();
+            }
+            case BVN -> {
                 if (!ELEVEN_DIGITS.matcher(trimmed).matches()) {
-                    return Optional.of("Invalid BVN format: expected 11 digits");
+                    yield Optional.of("Invalid BVN format: expected 11 digits");
                 }
-                return Optional.empty();
-
-            default:
-                return Optional.of("Unsupported document type: " + documentType);
-        }
+                yield Optional.empty();
+            }
+            default -> Optional.of("Unsupported document type: " + documentType);
+        };
     }
 
     private KycSubmissionResponse buildKycEntity(UUID customerId, UUID accountId, KycDocumentType documentType, String submittedValue, KycStatus status, String rejectionReason, AccountTier resultingTier){
@@ -133,11 +132,11 @@ public class KycServiceImpl implements KycService {
 
     private void buildCustomer(Customer customer, KycDocumentType documentType, String submittedValue){
         if(documentType.equals(KycDocumentType.NIN)){
-            customer.setNin(encoder.encode(submittedValue));
+            customer.setNin(encryptionUtil.encrypt(submittedValue));
             customer.setUpdatedAt(LocalDateTime.now());
         }
         else if (documentType.equals(KycDocumentType.BVN)){
-            customer.setBvn(encoder.encode(submittedValue));
+            customer.setBvn(encryptionUtil.encrypt(submittedValue));
             customer.setUpdatedAt(LocalDateTime.now());
         }
         customerRepository.save(customer);
