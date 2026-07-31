@@ -45,10 +45,4 @@ public class CustomerRegistrationRequest {
 
     @NotBlank(message = "Address cannot be null or empty")
     private String address;
-
-    @Nullable
-    private String nin;
-
-    @Nullable
-    private String bvn;
 }
