@@ -8,17 +8,21 @@ import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
 import com.groupa.digitalbackendapplication.domain.enums.Gender;
 import com.groupa.digitalbackendapplication.domain.enums.Role;
+import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.notification.EmailDetails;
 import com.groupa.digitalbackendapplication.notification.EmailService;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
+import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.CustomerService;
 import com.groupa.digitalbackendapplication.utils.AccountUtil;
+import com.groupa.digitalbackendapplication.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -36,7 +40,8 @@ public class CustomerServiceImpl implements CustomerService {
     private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
     private final AccountUtil accountUtil;
-    private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
+    private final SecurityUtil securityUtil;
 
     @Override
     public ResponseWrapper<AccountCreatedResponse> createPersonalAccount(CustomerRegistrationRequest payload) {
@@ -77,15 +82,80 @@ public class CustomerServiceImpl implements CustomerService {
                 .build();
     }
 
-    private SavedCustomerResponse buildCustomerDetails(String firstName, String lastName, String email, String password,
-                                                       String phoneNumber, Role role, Gender gender, LocalDate dateOfBirth,
-                                                       String address, String nin, String bvn){
+    @Override
+    public ResponseWrapper<AccountCreatedResponse> createAdminAccount(CustomerRegistrationRequest payload) {
+        Role userRole = Role.ADMIN;
+        AccountStatus accountStatus = AccountStatus.ACTIVE;
+        AccountTier accountTier = AccountTier.TIER_1;
+
+        if(validateAge(payload.getDateOfBirth())) throw
+        new BadRequestException("User must be at least 18 years old");
+
+        if(validatePhoneNumber(payload.getPhoneNumber())) throw
+                new BadRequestException("Error occurred: please provide another phone number");
+
+        Optional<Customer> customerOptional = customerRepository.findByEmail(payload.getEmail());
+        if(customerOptional.isPresent()) throw new BadRequestException("Error occurred: please provide another email");
+
+        SavedCustomerResponse userResponse = buildCustomerDetails(
+                payload.getFirstName(), payload.getLastName(), payload.getEmail(), payload.getPassword(),
+                payload.getPhoneNumber(), userRole, payload.getGender(), payload.getDateOfBirth(), payload.getAddress(), payload.getNin(), payload.getBvn());
+
+        String accountNumber = accountUtil.generateAccountNumber();
+        //Continue account creation
+
+        AccountCreatedResponse createAccount = buildAccount(userResponse.getCustomerId(), accountStatus, accountNumber, accountTier);
+
+        return ResponseWrapper.<AccountCreatedResponse>builder()
+                .data(createAccount)
+                .message("Account Creation Successful")
+                .statusCode(HttpStatus.CREATED)
+                .build();
+    }
+
+    @Override
+    public Response<CustomerDto> getUserProfile() {
+        AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
+
+        return getUserProfileById(loggedInUser.getCustomer().getId());
+    }
+
+    @Override
+    public Response<CustomerDto> getUserProfileById(UUID userId) {
+
+        Optional<Customer> customerOptional = customerRepository.findById(userId);
+
+        Customer customer = customerOptional.get();
+
+        CustomerDto customerDto = CustomerDto.builder()
+                .id(customer.getId())
+                .firstName(customer.getFirstName())
+                .lastName(customer.getLastName())
+                .email(customer.getEmail())
+                .phoneNumber(customer.getPhoneNumber())
+                .gender(customer.getGender())
+                .dateOfBirth(customer.getDateOfBirth())
+                .role(customer.getRole())
+                .address(customer.getAddress())
+                .build();
+
+        if (customerDto.getNin() != null) customerDto.setNin(customerDto.getNin());
+        if (customerDto.getBvn() != null) customerDto.setBvn(customerDto.getBvn());
+
+        return Response.<CustomerDto>builder()
+                .data(customerDto)
+                .message("Success")
+                .statusCode(HttpStatus.OK.value())
+                .build();
+    }
+
+    private SavedCustomerResponse buildCustomerDetails(String firstName, String lastName, String email, String password, String phoneNumber, Role role, Gender gender, LocalDate dateOfBirth, String address, String nin, String bvn){
 
         Customer customer =Customer.builder()
                 .firstName(firstName)
                 .lastName(lastName)
                 .email(email)
-                .password(password)
+                .password(passwordEncoder.encode(password))
                 .phoneNumber(phoneNumber)
                 .role(role)
                 .gender(gender)

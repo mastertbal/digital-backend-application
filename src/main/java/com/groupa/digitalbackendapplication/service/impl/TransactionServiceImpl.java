@@ -16,6 +16,7 @@ import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.repository.TransactionRepository;
 import com.groupa.digitalbackendapplication.service.DepositService;
 import com.groupa.digitalbackendapplication.service.TransactionService;
+import com.groupa.digitalbackendapplication.utils.TierLimiterUtil;
 import com.groupa.digitalbackendapplication.utils.TransactionRequeryUtil;
 import com.groupa.digitalbackendapplication.utils.TransactionUtil;
 import jakarta.validation.Valid;
@@ -43,7 +44,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
     private final DepositService depositService;
-    private final EmailService emailService;
+    private final TierLimiterUtil tierLimiterUtil;
 
     @Override
     @Transactional
@@ -55,6 +56,10 @@ public class TransactionServiceImpl implements TransactionService {
         Account destinationAccount = accountRepository.findByAccountNumber(payload.destinationAccount().trim())
                 .orElseThrow(() -> new ResourceNotFoundException("Account number does not exist"));
 
+        //Check if account balance isn't above tier maximum balance
+        tierLimiterUtil.validateNotAlreadyOverTierMaxBalance(sourceAccount);
+        //Check if daily transfer limit hasn't been exceeded
+        tierLimiterUtil.validateDailyTransferLimit(sourceAccount, payload.amount());
 
         if(payload.amount().compareTo(sourceAccount.getBalance()) > 0)
             throw new BadRequestException("Insufficient funds available in account");
@@ -65,6 +70,9 @@ public class TransactionServiceImpl implements TransactionService {
         //Deduct from sender, credit receiver
         sourceAccount.setBalance(sourceAccount.getBalance().subtract(payload.amount()));
         destinationAccount.setBalance(destinationAccount.getBalance().add(payload.amount()));
+
+        //Set total daily transfer
+        tierLimiterUtil.recordDailyTransferTotal(sourceAccount.getAccountNumber(), payload.amount());
 
         //Ledger entry for debit
         LocalDateTime now = LocalDateTime.now();
