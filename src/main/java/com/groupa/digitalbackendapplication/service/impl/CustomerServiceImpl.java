@@ -17,6 +17,7 @@ import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.CustomerService;
 import com.groupa.digitalbackendapplication.utils.AccountUtil;
+import com.groupa.digitalbackendapplication.utils.EncryptionUtil;
 import com.groupa.digitalbackendapplication.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final AccountUtil accountUtil;
     private final PasswordEncoder passwordEncoder;
     private final SecurityUtil securityUtil;
+    private final EncryptionUtil encryptionUtil;
 
     @Override
     public ResponseWrapper<AccountCreatedResponse> createPersonalAccount(CustomerRegistrationRequest payload) {
@@ -58,7 +60,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         SavedCustomerResponse userResponse = buildCustomerDetails(
                 payload.getFirstName(), payload.getLastName(), payload.getEmail(), payload.getPassword(),
-                payload.getPhoneNumber(), userRole, payload.getGender(), payload.getDateOfBirth(), payload.getAddress(), payload.getNin(), payload.getBvn());
+                payload.getPhoneNumber(), userRole, payload.getGender(), payload.getDateOfBirth(), payload.getAddress());
 
         String accountNumber = accountUtil.generateAccountNumber();
         //Continue account creation
@@ -99,7 +101,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         SavedCustomerResponse userResponse = buildCustomerDetails(
                 payload.getFirstName(), payload.getLastName(), payload.getEmail(), payload.getPassword(),
-                payload.getPhoneNumber(), userRole, payload.getGender(), payload.getDateOfBirth(), payload.getAddress(), payload.getNin(), payload.getBvn());
+                payload.getPhoneNumber(), userRole, payload.getGender(), payload.getDateOfBirth(), payload.getAddress());
 
         String accountNumber = accountUtil.generateAccountNumber();
         //Continue account creation
@@ -137,10 +139,9 @@ public class CustomerServiceImpl implements CustomerService {
                 .dateOfBirth(customer.getDateOfBirth())
                 .role(customer.getRole())
                 .address(customer.getAddress())
+                .nin(encryptionUtil.decrypt(customer.getNin()))
+                .bvn(encryptionUtil.decrypt(customer.getBvn()))
                 .build();
-
-        if (customerDto.getNin() != null) customerDto.setNin(customerDto.getNin());
-        if (customerDto.getBvn() != null) customerDto.setBvn(customerDto.getBvn());
 
         return Response.<CustomerDto>builder()
                 .data(customerDto)
@@ -149,7 +150,7 @@ public class CustomerServiceImpl implements CustomerService {
                 .build();
     }
 
-    private SavedCustomerResponse buildCustomerDetails(String firstName, String lastName, String email, String password, String phoneNumber, Role role, Gender gender, LocalDate dateOfBirth, String address, String nin, String bvn){
+    private SavedCustomerResponse buildCustomerDetails(String firstName, String lastName, String email, String password, String phoneNumber, Role role, Gender gender, LocalDate dateOfBirth, String address){
 
         Customer customer =Customer.builder()
                 .firstName(firstName)
@@ -161,8 +162,8 @@ public class CustomerServiceImpl implements CustomerService {
                 .gender(gender)
                 .dateOfBirth(dateOfBirth)
                 .address(address)
-                .bvn(bvn)
-                .nin(nin)
+                .bvn(null)
+                .nin(null)
                 .build();
         Customer savedCustomer = customerRepository.save(customer);
         return new SavedCustomerResponse(savedCustomer.getId());
