@@ -3,25 +3,24 @@ package com.groupa.digitalbackendapplication.service.impl;
 import com.groupa.digitalbackendapplication.domain.dto.request.CardDetailsRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.TransferFundsRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
-import com.groupa.digitalbackendapplication.domain.dto.response.TransactionResponse;
+import com.groupa.digitalbackendapplication.domain.dto.response.TransactionHistoryResponseDto;
+import com.groupa.digitalbackendapplication.domain.dto.response.TransactionStatusResponse;
 import com.groupa.digitalbackendapplication.domain.entities.*;
 import com.groupa.digitalbackendapplication.domain.enums.*;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
-import com.groupa.digitalbackendapplication.notification.EmailDetails;
-import com.groupa.digitalbackendapplication.notification.EmailService;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.CardDetailsRepository;
-import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.repository.TransactionRepository;
+import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.DepositService;
 import com.groupa.digitalbackendapplication.service.TransactionService;
+import com.groupa.digitalbackendapplication.utils.SecurityUtil;
 import com.groupa.digitalbackendapplication.utils.TierLimiterUtil;
 import com.groupa.digitalbackendapplication.utils.TransactionRequeryUtil;
 import com.groupa.digitalbackendapplication.utils.TransactionUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,23 +33,21 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@Slf4j
 @RequiredArgsConstructor
 @Validated
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final CardDetailsRepository cardDetailsRepository;
-    private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
     private final DepositService depositService;
     private final TierLimiterUtil tierLimiterUtil;
+    private final SecurityUtil securityUtil;
 
     @Override
     @Transactional
-    public ResponseWrapper<TransactionResponse> transferFunds(@Valid TransferFundsRequest payload) {
-        Account sourceAccount= accountRepository.findById(payload.accountId())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+    public ResponseWrapper<TransactionStatusResponse> transferFunds(@Valid TransferFundsRequest payload) {
+        Account sourceAccount = getAuthenticatedUser();
 
         //Does destination Account exists
         Account destinationAccount = accountRepository.findByAccountNumber(payload.destinationAccount().trim())
@@ -61,11 +58,14 @@ public class TransactionServiceImpl implements TransactionService {
         //Check if daily transfer limit hasn't been exceeded
         tierLimiterUtil.validateDailyTransferLimit(sourceAccount, payload.amount());
 
-        if(payload.amount().compareTo(sourceAccount.getBalance()) > 0)
+        if (payload.amount().compareTo(sourceAccount.getBalance()) > 0)
             throw new BadRequestException("Insufficient funds available in account");
 
-        Transaction transaction = TransactionUtil.buildTransactionEntity(TransactionType.TRANSFER, TransactionStatus.SUCCESSFUL,sourceAccount,
+        Transaction senderTransaction = TransactionUtil.buildTransactionEntity(TransactionType.TRANSFER, TransactionStatus.SUCCESSFUL, sourceAccount,
                 destinationAccount, payload.amount(), payload.description().trim());
+
+        Transaction receiverTransaction = TransactionUtil.buildTransactionEntity(TransactionType.TRANSFER, TransactionStatus.SUCCESSFUL, destinationAccount,
+                sourceAccount, payload.amount(), payload.description().trim());
 
         //Deduct from sender, credit receiver
         sourceAccount.setBalance(sourceAccount.getBalance().subtract(payload.amount()));
@@ -93,16 +93,14 @@ public class TransactionServiceImpl implements TransactionService {
         credit.setSettledAt(now);
 
         //Save transaction to db
-        transaction.addLedger(debit);
-        transaction.addLedger(credit);
-        transaction = transactionRepository.save(transaction);
+        senderTransaction.addLedger(debit);
+        senderTransaction.addLedger(credit);
 
-        //Send debit alert to sender while credit alert to receiver
-        sendDebitAlert(sourceAccount, payload.amount(), now);
-        sendCreditAlert(destinationAccount, payload.amount(), now);
+        senderTransaction = transactionRepository.save(senderTransaction);
+        transactionRepository.save(receiverTransaction);
 
-        return ResponseWrapper.<TransactionResponse>builder()
-                .data(buildTransactionResponse(transaction.getTransactionStatus()))
+        return ResponseWrapper.<TransactionStatusResponse>builder()
+                .data(buildTransactionResponse(senderTransaction.getTransactionStatus()))
                 .message("Transaction successful")
                 .statusCode(HttpStatus.CREATED)
                 .build();
@@ -110,12 +108,11 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
-    public ResponseWrapper<TransactionResponse> depositFunds(@Valid CardDetailsRequest payload) {
-        if(payload.depositAmount().compareTo(BigDecimal.valueOf(100)) < 0)
-            throw new BadRequestException("Deposit amount cannot be less than 100");
+    public ResponseWrapper<TransactionStatusResponse> depositFunds(@Valid CardDetailsRequest payload) {
+        Account destinationAccount = getAuthenticatedUser();
 
-        Account destinationAccount = accountRepository.findById(payload.accountId())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+        if (payload.depositAmount().compareTo(BigDecimal.valueOf(100)) < 0)
+            throw new BadRequestException("Deposit amount cannot be less than 100");
 
         String payloadCardNumber = payload.cardNumber().trim();
         String payloadCardName = payload.cardName().trim();
@@ -123,27 +120,23 @@ public class TransactionServiceImpl implements TransactionService {
         CardDetails cardDetails = cardDetailsRepository.findByCardNumber(payloadCardNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid card. Please use a valid card"));
 
-        if(!cardDetails.cardName()
-                .equalsIgnoreCase(payloadCardName) || !cardDetails.dateOfExpiry().equals(payload.dateOfExpiry()) || !cardDetails.cvc().equals(payload.cvc())){
+        if (!cardDetails.cardName().equalsIgnoreCase(payloadCardName) || !cardDetails.dateOfExpiry().equals(payload.dateOfExpiry()) || !cardDetails.cvc().equals(payload.cvc())) {
             throw new BadRequestException("Problem occurred. Kindly reconfirm your card details and try again");
         }
 
         //Transaction will either be successful or pending - based on Card used in CardDetailsRepository
-        if(cardDetails.transactionStatus() == TransactionStatus.SUCCESSFUL){
+        if (cardDetails.transactionStatus() == TransactionStatus.SUCCESSFUL) {
             Transaction savedTransaction = depositService.buildSuccessfulDeposit(destinationAccount, payload);
 
-            sendCreditAlert(destinationAccount, payload.depositAmount(), LocalDateTime.now());
-
-            return ResponseWrapper.<TransactionResponse>builder()
+            return ResponseWrapper.<TransactionStatusResponse>builder()
                     .data(buildTransactionResponse(savedTransaction.getTransactionStatus()))
                     .message("Deposit Successful")
                     .statusCode(HttpStatus.CREATED)
                     .build();
-        }
-        else{
+        } else {
             Transaction savedTransaction = depositService.buildPendingDeposit(destinationAccount, payload);
 
-            return ResponseWrapper.<TransactionResponse>builder()
+            return ResponseWrapper.<TransactionStatusResponse>builder()
                     .data(buildTransactionResponse(savedTransaction.getTransactionStatus()))
                     .message("Deposit Successful")
                     .statusCode(HttpStatus.ACCEPTED)
@@ -153,11 +146,11 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
-    public ResponseWrapper<TransactionResponse> requeryTransaction(UUID id) {
+    public ResponseWrapper<TransactionStatusResponse> requeryTransaction(UUID id) {
         Transaction transaction = transactionRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Transaction does not exist"));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction does not exist"));
 
-        if(transaction.getTransactionStatus() != TransactionStatus.PENDING)
+        if (transaction.getTransactionStatus() != TransactionStatus.PENDING)
             throw new BadRequestException("Cannot requery a transaction that is not pending");
 
         //SIMULATING A REQUERY, WHERE TRANSACTION CAN EITHER BE SUCCESSFUL OR DECLINED.
@@ -166,11 +159,9 @@ public class TransactionServiceImpl implements TransactionService {
         TransactionStatus updatedTransactionStatus = transaction.getTransactionStatus();
 
         //IF UPDATED TRANSACTION STATUS IS NOW SUCCESSFUL, WE CAN ADD THIS FUNDS TO CUSTOMER'S WALLET
-        if(updatedTransactionStatus == TransactionStatus.SUCCESSFUL){
+        if (updatedTransactionStatus == TransactionStatus.SUCCESSFUL) {
             Account account = transaction.getDestinationAccount();
             account.setBalance(account.getBalance().add(transaction.getAmountTransferred()));
-
-            sendCreditAlert(account, transaction.getAmountTransferred(), LocalDateTime.now());
         }
 
         List<LedgerEntry> existingLedgerEntries = new ArrayList<>(transaction.getLedgerEntries());
@@ -179,11 +170,11 @@ public class TransactionServiceImpl implements TransactionService {
         LocalDateTime updatedLedgerTime = LocalDateTime.now();
 
         //IT IS EITHER GOING TO BE SUCCESSFUL OR DECLINED NOW
-        for(LedgerEntry ledgerEntry : existingLedgerEntries){
-            if(updatedTransactionStatus == TransactionStatus.SUCCESSFUL){
+        for (LedgerEntry ledgerEntry : existingLedgerEntries) {
+            if (updatedTransactionStatus == TransactionStatus.SUCCESSFUL) {
                 ledgerEntry.setStatus(LedgerEntryStatus.SETTLED);
                 ledgerEntry.setSettledAt(updatedLedgerTime);
-            }else{
+            } else {
                 ledgerEntry.setStatus(LedgerEntryStatus.VOID);
                 ledgerEntry.setVoidedAt(updatedLedgerTime);
             }
@@ -193,62 +184,41 @@ public class TransactionServiceImpl implements TransactionService {
 
         transactionRepository.save(transaction);
 
-        return ResponseWrapper.<TransactionResponse>builder()
+        return ResponseWrapper.<TransactionStatusResponse>builder()
                 .message(updatedTransactionStatus == TransactionStatus.SUCCESSFUL ? "Transaction Successful" : "Transaction Failed")
                 .data(buildTransactionResponse(updatedTransactionStatus))
                 .statusCode(HttpStatus.CREATED)
                 .build();
     }
 
-    private void sendDebitAlert(Account account, BigDecimal amount, LocalDateTime date){
-        try {
-            Customer customer = getCustomer(account.getOwnerId());
+    @Override
+    public ResponseWrapper<List<TransactionHistoryResponseDto>> getAllTransactionHistory() {
+        Account account = getAuthenticatedUser();
 
-            String message = "Dear " + customer.getFirstName() + ",\n\n" +
-                    "Your account has been debited with NGN " + amount + "\n" +
-                    "Account Number: " + account.getAccountNumber() + "\n" +
-                    "Date: " + date + "\n" +
-                    "Your available balance is " + account.getBalance() + "\n\n" +
-                    "Thank you for banking with us!";
+        List<TransactionHistoryResponseDto> transactions = transactionRepository.findAllByDestinationAccount(account)
+                .stream().map(tran -> new TransactionHistoryResponseDto(tran.getId(),
+                        tran.getTransactionType(), tran.getTransactionStatus(), tran.getSourceAccount() != null ? tran.getSourceAccount().getAccountNumber() : null,
+                        tran.getAmountTransferred(), tran.getDescription(), tran.getCreatedAt()))
+                .toList();
 
-            EmailDetails emailDetails = EmailDetails.builder()
-                    .recipient(customer.getEmail())
-                    .subject("Debit Alert - " + account.getAccountNumber())
-                    .messageBody(message)
-                    .build();
+        System.out.println(transactions);
 
-            emailService.sendEmail(emailDetails);
-
-        } catch (Exception e){
-            log.error("Debit alert failed for account {}: {}", account.getAccountNumber(), e.getMessage());
-        }
-    }
-    private void sendCreditAlert(Account account, BigDecimal amount, LocalDateTime date){
-        try{
-            Customer customer = getCustomer(account.getOwnerId());
-            String message = "Dear " + customer.getFirstName() + ",\n\n" +
-                    "Your account has been credited with NGN " + amount + "\n" +
-                    "Date: " + date + "\n" +
-                    "Your available balance is " + account.getBalance() + "\n\n" +
-                    "Thank you for banking with us!";
-
-            EmailDetails emailDetails = EmailDetails.builder()
-                    .recipient(customer.getEmail())
-                    .subject("Credit Alert - " + account.getAccountNumber())
-                    .messageBody(message)
-                    .build();
-            emailService.sendEmail(emailDetails);
-
-        } catch(Exception e){
-            log.error("Credit alert failed for account {}: {}", account.getAccountNumber(), e.getMessage());
-        }
+        return ResponseWrapper.<List<TransactionHistoryResponseDto>>builder()
+                .data(transactions)
+                .message("Transactions fetched")
+                .statusCode(HttpStatus.OK)
+                .build();
     }
 
-    private Customer getCustomer(UUID ownerId) {
-        return customerRepository.findById(ownerId).orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+    private TransactionStatusResponse buildTransactionResponse(TransactionStatus transactionStatus) {
+        return new TransactionStatusResponse(transactionStatus);
     }
 
-    private TransactionResponse buildTransactionResponse(TransactionStatus transactionStatus){
-        return new TransactionResponse(transactionStatus);
+    private Account getAuthenticatedUser() {
+        AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
+        Customer customer = loggedInUser.getCustomer();
+
+        return accountRepository.findByOwnerId(customer.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
     }
 }
