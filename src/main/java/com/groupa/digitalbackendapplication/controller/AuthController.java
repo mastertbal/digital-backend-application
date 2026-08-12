@@ -2,6 +2,7 @@ package com.groupa.digitalbackendapplication.controller;
 
 import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
 import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
+import com.groupa.digitalbackendapplication.domain.response.LogoutResponse;
 import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +27,11 @@ public class AuthController {
             @Valid @RequestBody LoginRequest loginRequest
     ){
         return ResponseEntity.ok(authService.loginUser(loginRequest));
+    }
+
+    @PostMapping(path = "/logout")
+    public ResponseEntity<Response<LogoutResponse>> logoutUser(){
+        return ResponseEntity.ok(authService.logout());
     }
 
     @PostMapping("/new-access-token")

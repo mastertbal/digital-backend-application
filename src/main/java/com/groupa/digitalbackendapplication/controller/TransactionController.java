@@ -30,8 +30,6 @@ public class TransactionController {
 
     @PostMapping("/deposit")
     public ResponseEntity<ResponseWrapper<TransactionResponse>> depositFunds(@Valid @RequestBody CardDetailsRequest payload){
-        SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-                        .forEach(a -> System.out.println(a.getAuthority()));
         System.out.println("Depositing funds");
         ResponseWrapper<TransactionResponse> response = transactionService.depositFunds(payload);
         return ResponseEntity.status(response.getStatusCode()).body(response);
