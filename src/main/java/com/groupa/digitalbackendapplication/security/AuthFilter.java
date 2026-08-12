@@ -1,5 +1,6 @@
 package com.groupa.digitalbackendapplication.security;
 
+import com.groupa.digitalbackendapplication.service.LoginSessionService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -27,7 +28,6 @@ public class AuthFilter extends OncePerRequestFilter {
 
     private final TokenService tokenService;
     private final CustomUserDetailsService customUserDetailsService;
-
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)

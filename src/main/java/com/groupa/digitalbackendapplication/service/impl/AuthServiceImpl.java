@@ -4,6 +4,7 @@ import com.groupa.digitalbackendapplication.domain.dto.response.CustomerDto;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
 import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
 import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
+import com.groupa.digitalbackendapplication.domain.response.LogoutResponse;
 import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
@@ -12,6 +13,7 @@ import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.security.CustomUserDetailsService;
 import com.groupa.digitalbackendapplication.security.TokenService;
 import com.groupa.digitalbackendapplication.service.AuthService;
+import com.groupa.digitalbackendapplication.service.LoginSessionService;
 import com.groupa.digitalbackendapplication.service.RefreshSessionService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -27,6 +29,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
     private final TokenService tokenService;
     private final CustomUserDetailsService customUserDetailsService;
     private final RefreshSessionService refreshSessionService;
+    private final LoginSessionService loginSessionService;
 
     @Override
     public Response<LoginResponse> loginUser(LoginRequest loginRequest) {
@@ -51,16 +55,20 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String role = authUser.getCustomer().getRole().name();
+        UUID userId = authUser.getCustomer().getId();
 
         String token = tokenService.generateToken(authUser.getUsername());
         String refreshToken = tokenService.generateRefreshToken(authUser.getUsername());
 
         String sessionId = LocalDateTime.now().toString();
 
-        refreshSessionService.createLoginSession(sessionId, authUser.getCustomer().getId());
+        refreshSessionService.createLoginSession(sessionId, userId);
+
+        loginSessionService.saveLoginSession(userId);
 
         UsernamePasswordAuthenticationToken authenticationToken =
                 new UsernamePasswordAuthenticationToken(authUser, null, authUser.getAuthorities());
+
         SecurityContextHolder.getContext().setAuthentication(authenticationToken);
 
         LoginResponse loginResponse = LoginResponse.builder()
@@ -134,5 +142,30 @@ public class AuthServiceImpl implements AuthService {
             System.out.println(tokenService.validateRefreshToken(refreshToken) + ". Refresh token is invalid");
         }
         throw new BadRequestException("Something went wrong");
+    }
+
+    @Override
+    public Response<LogoutResponse> logout() {
+        System.out.println("Logging out");
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        System.out.println(authentication);
+        AuthUser authUser = (AuthUser) authentication.getPrincipal();
+        UUID userId = authUser.getCustomer().getId();
+        System.out.println(userId);
+
+//        SecurityContextHolder.getContext().setAuthentication(null);
+
+        loginSessionService.invalidateLoginSession(userId);
+
+        refreshSessionService.invalidateLoginSession(userId);
+
+        LogoutResponse logoutResponse = new LogoutResponse("Logout Successful");
+
+        return Response.<LogoutResponse>builder()
+                .message("Success")
+                .data(logoutResponse)
+                .statusCode(HttpStatus.OK.value())
+                .build();
     }
 }

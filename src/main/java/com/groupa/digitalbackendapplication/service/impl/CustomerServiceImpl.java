@@ -4,6 +4,7 @@ import com.groupa.digitalbackendapplication.domain.dto.request.CustomerRegistrat
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
 import com.groupa.digitalbackendapplication.domain.entities.Account;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
+import com.groupa.digitalbackendapplication.domain.entities.LoginSession;
 import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
 import com.groupa.digitalbackendapplication.domain.enums.Gender;
@@ -16,7 +17,9 @@ import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.CustomerService;
+import com.groupa.digitalbackendapplication.service.LoginSessionService;
 import com.groupa.digitalbackendapplication.utils.AccountUtil;
+import com.groupa.digitalbackendapplication.utils.LoginSessionUtil;
 import com.groupa.digitalbackendapplication.utils.EncryptionUtil;
 import com.groupa.digitalbackendapplication.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +45,8 @@ public class CustomerServiceImpl implements CustomerService {
     private final AccountRepository accountRepository;
     private final AccountUtil accountUtil;
     private final PasswordEncoder passwordEncoder;
+    private final LoginSessionService loginSessionService;
+    private final LoginSessionUtil loginSessionUtil;
     private final SecurityUtil securityUtil;
     private final EncryptionUtil encryptionUtil;
 
@@ -128,6 +133,8 @@ public class CustomerServiceImpl implements CustomerService {
         Optional<Customer> customerOptional = customerRepository.findById(userId);
 
         Customer customer = customerOptional.get();
+
+        loginSessionUtil.verify(customer.getId());
 
         CustomerDto customerDto = CustomerDto.builder()
                 .id(customer.getId())
