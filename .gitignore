@@ -4,6 +4,8 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+.env
+
 ### STS ###
 .apt_generated
 .classpath
@@ -38,3 +40,4 @@ build/
 
 .env
 
+/src/main/java/com/groupa/digitalbackendapplication/play.java
