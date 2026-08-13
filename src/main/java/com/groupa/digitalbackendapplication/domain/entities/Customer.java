@@ -21,13 +21,9 @@ public class Customer extends User{
     @Column(name = "address", nullable = false)
     private String address;
 
-    @Column(name = "nin", unique = true, nullable = false)
+    @Column(name = "nin", unique = true)
     private String nin;
 
-    @Column(name = "bvn", unique = true, nullable = false)
+    @Column(name = "bvn", unique = true)
     private String bvn;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
 }
