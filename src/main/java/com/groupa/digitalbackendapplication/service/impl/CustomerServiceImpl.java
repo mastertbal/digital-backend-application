@@ -4,7 +4,6 @@ import com.groupa.digitalbackendapplication.domain.dto.request.CustomerRegistrat
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
 import com.groupa.digitalbackendapplication.domain.entities.Account;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
-import com.groupa.digitalbackendapplication.domain.entities.LoginSession;
 import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
 import com.groupa.digitalbackendapplication.domain.enums.Gender;
@@ -49,6 +48,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final LoginSessionUtil loginSessionUtil;
     private final SecurityUtil securityUtil;
     private final EncryptionUtil encryptionUtil;
+    private final EmailService emailService;
 
     @Override
     public ResponseWrapper<AccountCreatedResponse> createPersonalAccount(CustomerRegistrationRequest payload) {
@@ -187,6 +187,7 @@ public class CustomerServiceImpl implements CustomerService {
         accountRepository.save(account);
         return new AccountCreatedResponse(account.getAccountNumber());
     }
+
     private void sendWelcomeEmail(String firstname, String email){
         String welcomeMessage = "Welcome, " + firstname + "!\n\n" +
                 "We are excited to have you on board at PAYEDGE DIGITAL BANKING. \n\n" +
