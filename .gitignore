@@ -35,3 +35,4 @@ build/
 /src/main/java/com/groupa/digitalbackendapplication/domain/TestMain.java
 /.env
 /src/main/resources/dev_application.properties
+pom.xml
