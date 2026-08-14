@@ -12,12 +12,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping
+@RequestMapping("/api/business")
 @RequiredArgsConstructor
 public class BusinessAccountController {
     private final BusinessAccountService businessAccountService;
 
-    @PostMapping("/business/createaccount")
+    @PostMapping("/createaccount")
     public ResponseWrapper<BusinessAccountCreated> createBusinessAccount(@Valid @RequestBody
                                                                                 BusinessRegistrationRequest payload){
         return businessAccountService.createBusinessAccount(payload);
