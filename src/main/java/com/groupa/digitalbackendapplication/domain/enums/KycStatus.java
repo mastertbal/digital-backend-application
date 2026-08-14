@@ -1,7 +1,7 @@
 package com.groupa.digitalbackendapplication.domain.enums;
 
-public enum LedgerEntryStatus {
-    SETTLED,
+public enum KycStatus {
     PENDING,
-    VOID
+    APPROVED,
+    REJECTED
 }

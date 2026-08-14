@@ -1,4 +1,6 @@
 package com.groupa.digitalbackendapplication.domain.enums;
 
-public enum SubmissionStatus {
+public enum KycDocumentType {
+    NIN,
+    BVN
 }

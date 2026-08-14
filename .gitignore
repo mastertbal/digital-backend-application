@@ -4,6 +4,8 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+.env
+
 ### STS ###
 .apt_generated
 .classpath
@@ -35,4 +37,7 @@ build/
 /src/main/java/com/groupa/digitalbackendapplication/domain/TestMain.java
 /.env
 /src/main/resources/dev_application.properties
-pom.xml
+
+.env
+
+/src/main/java/com/groupa/digitalbackendapplication/play.java
