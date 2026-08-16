@@ -21,10 +21,17 @@ public class SecurityConfig {
     private final AuthFilter authFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http.csrf(csrfConfigurer -> csrfConfigurer.disable())
                 .authorizeHttpRequests(reqConfigurer ->
-                        reqConfigurer.requestMatchers("/api/auth/**", "/api/account/create-personal-account", "/api/account/create-admin-account", "/api/business/createaccount").permitAll()
+                        reqConfigurer.requestMatchers("/api/auth/**",
+                                        "/api/account/create-personal-account",
+                                        "/api/account/create-admin-account",
+                                        "/api/business/createaccount",
+                                        "/v3/api-docs/**",
+                                        "/swagger-ui.html",
+                                        "/v3/api-docs.yaml",
+                                        "/swagger-ui/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(sessionConfigurer -> sessionConfigurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
