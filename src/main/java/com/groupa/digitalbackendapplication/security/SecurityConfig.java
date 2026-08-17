@@ -28,7 +28,8 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                         "/api/account/create-personal-account",
                                         "/api/account/create-admin-account",
-                                        "/api/business/createaccount").permitAll()
+                                        "/api/business/createaccount",
+                                        "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources/**", "/webjars/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(sessionConfigurer -> sessionConfigurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
