@@ -113,7 +113,6 @@ public class AuthServiceImpl implements AuthService {
         if (tokenService.validateRefreshToken(refreshToken)) {
             // invalidate previous session
             refreshSessionService.invalidateLoginSession(customer.getId());
-            System.out.println("Invalidate refresh session called");
 
             // generate new session id
             String sessionId = LocalDateTime.now().toString();
@@ -123,9 +122,8 @@ public class AuthServiceImpl implements AuthService {
             // generate new refresh token
             String newRefreshToken = tokenService.generateRefreshToken(customer.getEmail());
 
-            // save new session id into user login session table
+            // save new session id into refresh session table
             refreshSessionService.createLoginSession(sessionId, customer.getId());
-            System.out.println("Refresh session created");
 
             LoginResponse loginResponse = LoginResponse.builder()
                     .accessToken(newAccessToken)
@@ -146,15 +144,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public Response<LogoutResponse> logout() {
-        System.out.println("Logging out");
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        System.out.println(authentication);
         AuthUser authUser = (AuthUser) authentication.getPrincipal();
         UUID userId = authUser.getCustomer().getId();
-        System.out.println(userId);
-
-//        SecurityContextHolder.getContext().setAuthentication(null);
 
         loginSessionService.invalidateLoginSession(userId);
 
