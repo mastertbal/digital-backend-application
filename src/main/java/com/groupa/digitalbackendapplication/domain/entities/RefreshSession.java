@@ -16,14 +16,14 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "refresh_session")
+@Table(name = "refresh_sessions")
 public class RefreshSession {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id")
     private UUID id;
 
-    @Column(name = "active_session_id")
+    @Column(name = "active_session_id", length = 50)
     private String activeSessionId;
 
     @Column(name = "user_id")

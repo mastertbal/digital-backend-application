@@ -20,13 +20,13 @@ public class DailyTransferTotal {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(name = "account_number", nullable = false, length = 25)
     private String accountNumber;
 
-    @Column(nullable = false)
+    @Column(name = "transfer_date", nullable = false)
     private LocalDate transferDate;
 
-    @Column(nullable = false, precision = 19, scale = 2)
+    @Column(name = "total_amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal totalAmount;
 
     public DailyTransferTotal(String accountNumber, LocalDate transferDate, BigDecimal totalAmount) {
