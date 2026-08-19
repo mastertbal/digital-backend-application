@@ -210,6 +210,28 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
     }
 
+    @Override
+    public ResponseWrapper<TransactionHistoryResponseDto> getTransactionById(UUID transactionId){
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(()-> new ResourceNotFoundException("Transaction not found"));
+
+        String sourceAccount = "";
+        if(transaction.getSourceAccount() != null)
+            sourceAccount = transaction.getSourceAccount().getAccountNumber();
+        else
+            sourceAccount = null;
+
+        TransactionHistoryResponseDto dto =  new TransactionHistoryResponseDto(transaction.getId(),
+                transaction.getTransactionType(), transaction.getTransactionStatus(),sourceAccount,
+                transaction.getAmountTransferred(), transaction.getDescription(), transaction.getCreatedAt());
+
+        return ResponseWrapper.<TransactionHistoryResponseDto>builder()
+                .data(dto)
+                .message("Fetched Transaction successfully")
+                .statusCode(HttpStatus.OK)
+                .build();
+    }
+
     private TransactionStatusResponse buildTransactionResponse(TransactionStatus transactionStatus) {
         return new TransactionStatusResponse(transactionStatus);
     }

@@ -4,6 +4,7 @@ import com.groupa.digitalbackendapplication.domain.dto.request.AccountSuspension
 import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.KycRejectionRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
+import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.service.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -63,5 +64,22 @@ public class AdminController {
     @PatchMapping("/suspend-account")
     public ResponseWrapper<String> suspendAccount(@Valid @RequestBody AccountSuspensionRequest payload){
         return adminService.suspendAccount(payload);
+    }
+    @Operation(security = @SecurityRequirement(name = "bearerAuth"))
+    @PatchMapping("/reactivate-account/{account-id}")
+    public ResponseWrapper<String> reactivateAccount(@PathVariable("account-id") UUID id){
+        return adminService.reactivateAccount(id);
+    }
+
+    @Operation(security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/customer-profile/{customer-id}")
+    public Response<CustomerDto> getCustomerProfileById(@PathVariable("customer-id") UUID id){
+        return adminService.getCustomerProfile(id);
+    }
+
+    @Operation(security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/transaction/{transaction-id}")
+    public ResponseWrapper<TransactionHistoryResponseDto> getTransactionById(@PathVariable("transaction-id") UUID id){
+        return adminService.getTransactionById(id);
     }
 }
