@@ -9,8 +9,8 @@ import lombok.Data;
 @AllArgsConstructor
 @Data
 public class KycSubmissionRequest {
-//    @NotNull(message = "Please select document type")
+    @NotNull(message = "Please select document type")
     private KycDocumentType documentType;
-//    @NotBlank(message = "Field cannot be empty")
+    @NotBlank(message = "Field cannot be empty")
     private String submittedValue;
 }

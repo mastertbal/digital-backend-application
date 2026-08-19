@@ -2,13 +2,13 @@ package com.groupa.digitalbackendapplication.controller;
 
 import com.groupa.digitalbackendapplication.domain.dto.request.CardDetailsRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.TransferFundsRequest;
-import com.groupa.digitalbackendapplication.domain.dto.response.DailyTransactionResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
 import com.groupa.digitalbackendapplication.domain.dto.response.TransactionHistoryResponseDto;
 import com.groupa.digitalbackendapplication.domain.dto.response.TransactionStatusResponse;
 import com.groupa.digitalbackendapplication.service.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,6 +25,7 @@ import java.util.UUID;
 @RequestMapping("/api/transaction")
 @PreAuthorize("hasAuthority('CUSTOMER')")
 @Tag(name = "Transaction Controller", description = "APIs for handling transactions")
+@SecurityRequirement(name = "bearerAuth")
 public class TransactionController {
 
     private final TransactionService transactionService;

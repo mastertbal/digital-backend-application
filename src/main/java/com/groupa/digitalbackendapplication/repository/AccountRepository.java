@@ -1,6 +1,8 @@
 package com.groupa.digitalbackendapplication.repository;
 
 import com.groupa.digitalbackendapplication.domain.entities.Account;
+import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
+import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,4 +15,8 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
     Optional<Account> findByAccountNumber(String accountNumber);
 
     Optional<Account> findByOwnerId(UUID uuid);
+
+    long countAccountByAccountTier(AccountTier accountTier);
+
+    long countByAccountStatus(AccountStatus accountStatus);
 }

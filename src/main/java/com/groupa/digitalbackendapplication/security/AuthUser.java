@@ -11,26 +11,26 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 @Builder
 @Data
 public class AuthUser implements UserDetails {
 
-    private Customer customer;
     private User user;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(customer.getRole().name()));
+        return Set.of(new SimpleGrantedAuthority(user.getRole().name()));
     }
 
     @Override
     public @Nullable String getPassword() {
-        return customer.getPassword();
+        return user.getPassword();
     }
 
     @Override
     public String getUsername() {
-        return customer.getEmail();
+        return user.getEmail();
     }
 }

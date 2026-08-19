@@ -1,19 +1,21 @@
 package com.groupa.digitalbackendapplication.controller;
 
+import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
+import com.groupa.digitalbackendapplication.domain.dto.response.AdminCreationResponse;
+import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
 import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
 import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
 import com.groupa.digitalbackendapplication.domain.response.LogoutResponse;
 import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.service.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -22,11 +24,23 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @PostMapping("/create-Admin")
+    public ResponseWrapper<AdminCreationResponse> createAdmin(@Valid @RequestBody AdminCreationRequest payload){
+        return authService.createAdmin(payload);
+    }
+
     @PostMapping(path = "/login")
     public ResponseEntity<Response<LoginResponse>> loginUser(
             @Valid @RequestBody LoginRequest loginRequest
     ){
         return ResponseEntity.ok(authService.loginUser(loginRequest));
+    }
+
+    @Operation(security =@SecurityRequirement(name = "X-ADMIN_ID"))
+    @PostMapping(path = "/login-admin")
+    public ResponseEntity<Response<LoginResponse>> loginAdmin(@Valid @RequestBody LoginRequest payload,
+                                                              @RequestHeader("X-ADMIN_ID") String adminId){
+        return ResponseEntity.ok(authService.loginAdmin(payload, adminId));
     }
 
     @PostMapping(path = "/logout")

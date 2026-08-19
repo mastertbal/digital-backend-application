@@ -18,4 +18,6 @@ public interface TransactionService {
     ResponseWrapper<TransactionStatusResponse> requeryTransaction(UUID id);
 
     ResponseWrapper<List<TransactionHistoryResponseDto>> getAllTransactionHistory();
+
+    ResponseWrapper<TransactionHistoryResponseDto> getTransactionById(UUID transactionId);
 }
