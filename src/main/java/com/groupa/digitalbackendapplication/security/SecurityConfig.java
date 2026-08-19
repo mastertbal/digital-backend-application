@@ -25,10 +25,12 @@ public class SecurityConfig {
         http.csrf(csrfConfigurer -> csrfConfigurer.disable())
                 .authorizeHttpRequests(reqConfigurer ->
                         reqConfigurer.requestMatchers(
+                                "/api/daily-transactions/daily",
                                 "/api/auth/**",
                                         "/api/account/create-personal-account",
                                         "/api/account/create-admin-account",
                                         "/api/business/createaccount",
+                                        "/swagger-ui.html/**",
                                         "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources/**", "/webjars/**").permitAll()
                                 .anyRequest().authenticated()
                 )

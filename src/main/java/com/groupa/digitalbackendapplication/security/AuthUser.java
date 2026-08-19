@@ -1,6 +1,7 @@
 package com.groupa.digitalbackendapplication.security;
 
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
+import com.groupa.digitalbackendapplication.domain.entities.User;
 import lombok.Builder;
 import lombok.Data;
 import org.jspecify.annotations.Nullable;
@@ -16,6 +17,7 @@ import java.util.List;
 public class AuthUser implements UserDetails {
 
     private Customer customer;
+    private User user;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -2,6 +2,7 @@ package com.groupa.digitalbackendapplication.service.impl;
 
 import com.groupa.digitalbackendapplication.domain.dto.request.CardDetailsRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.TransferFundsRequest;
+import com.groupa.digitalbackendapplication.domain.dto.response.DailyTransactionResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
 import com.groupa.digitalbackendapplication.domain.dto.response.TransactionHistoryResponseDto;
 import com.groupa.digitalbackendapplication.domain.dto.response.TransactionStatusResponse;
@@ -11,6 +12,7 @@ import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.CardDetailsRepository;
+import com.groupa.digitalbackendapplication.repository.DailyTransactionsRepository;
 import com.groupa.digitalbackendapplication.repository.TransactionRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.DepositService;
@@ -27,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +43,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
     private final CardDetailsRepository cardDetailsRepository;
     private final AccountRepository accountRepository;
+    private final DailyTransactionsRepository dailyTransactionsRepository;
     private final DepositService depositService;
     private final TierLimiterUtil tierLimiterUtil;
     private final SecurityUtil securityUtil;
@@ -98,7 +102,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         senderTransaction = transactionRepository.save(senderTransaction);
         transactionRepository.save(receiverTransaction);
-
+        //fixme: At this point, we also save the daily debit and daily credit to db
         return ResponseWrapper.<TransactionStatusResponse>builder()
                 .data(buildTransactionResponse(senderTransaction.getTransactionStatus()))
                 .message("Transaction successful")
@@ -213,6 +217,7 @@ public class TransactionServiceImpl implements TransactionService {
     private TransactionStatusResponse buildTransactionResponse(TransactionStatus transactionStatus) {
         return new TransactionStatusResponse(transactionStatus);
     }
+
 
     private Account getAuthenticatedUser() {
         AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
