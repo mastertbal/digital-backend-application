@@ -1,5 +1,6 @@
 package com.groupa.digitalbackendapplication.service;
 
+import com.groupa.digitalbackendapplication.domain.dto.request.ChangePasswordRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.CustomerRegistrationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.AccountCreatedResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.CustomerDto;
@@ -18,4 +19,6 @@ public interface CustomerService {
     Response<CustomerDto> getUserProfile();
 
     Response<CustomerDto> getUserProfileById(UUID userId);
+
+    ResponseWrapper<String> changePassword(ChangePasswordRequest payload);
 }
