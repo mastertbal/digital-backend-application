@@ -5,6 +5,7 @@ import com.groupa.digitalbackendapplication.domain.dto.request.CustomerRegistrat
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
 import com.groupa.digitalbackendapplication.domain.entities.Account;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
+import com.groupa.digitalbackendapplication.domain.entities.User;
 import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
 import com.groupa.digitalbackendapplication.domain.enums.Gender;
@@ -16,6 +17,7 @@ import com.groupa.digitalbackendapplication.notification.EmailDetails;
 import com.groupa.digitalbackendapplication.notification.EmailService;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
+import com.groupa.digitalbackendapplication.repository.UserRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.CustomerService;
 import com.groupa.digitalbackendapplication.service.LoginSessionService;
@@ -43,6 +45,7 @@ import java.util.UUID;
 
 public class CustomerServiceImpl implements CustomerService {
 
+    private final UserRepository userRepository;
     private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
     private final AccountUtil accountUtil;
@@ -61,7 +64,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         if(validatePhoneNumber(payload.getPhoneNumber())) throw new BadRequestException("Error occurred: please provide another phone number");
 
-        Optional<Customer> customerOptional = customerRepository.findByEmail(payload.getEmail());
+        Optional<User> customerOptional = userRepository.findByEmail(payload.getEmail());
         if(customerOptional.isPresent()) throw new BadRequestException("Error occurred: please provide another email");
 
         SavedCustomerResponse userResponse = buildCustomerDetails(
@@ -102,7 +105,7 @@ public class CustomerServiceImpl implements CustomerService {
         if(validatePhoneNumber(payload.getPhoneNumber())) throw
                 new BadRequestException("Error occurred: please provide another phone number");
 
-        Optional<Customer> customerOptional = customerRepository.findByEmail(payload.getEmail());
+        Optional<User> customerOptional = userRepository.findByEmail(payload.getEmail());
         if(customerOptional.isPresent()) throw new BadRequestException("Error occurred: please provide another email");
 
         SavedCustomerResponse userResponse = buildCustomerDetails(
@@ -131,12 +134,18 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public Response<CustomerDto> getUserProfileById(UUID userId) {
 
+        Optional<User> userOptional =  userRepository.findById(userId);
         Customer customer = customerRepository.findById(userId)
                 .orElseThrow(()-> new ResourceNotFoundException("User not found"));
 
+        User user = userOptional.get();
         Account account = accountRepository.findByOwnerId(customer.getId())
                 .orElseThrow(()-> new ResourceNotFoundException("Account not found"));
 
+        loginSessionUtil.verify(user.getId());
+
+        Customer customer = customerRepository.findById(user.getId())
+                .orElseThrow(() -> new BadRequestException("Cannot find user"));
         AccountDto accountDto = AccountDto.builder()
                 .id(account.getId())
                 .accountNumber(account.getAccountNumber())

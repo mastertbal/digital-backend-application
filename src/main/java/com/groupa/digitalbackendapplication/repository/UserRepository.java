@@ -9,9 +9,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface CustomerRepository extends JpaRepository<Customer, UUID> {
+public interface UserRepository extends JpaRepository<User, UUID> {
 
-    Optional<Customer> findById(UUID id);
-    Optional<Customer> findByEmail(String email);
-    Optional<Customer> findByPhoneNumber(String phoneNumber);
+    Optional<User> findById(UUID id);
+    Optional<User> findByEmail(String email);
+    Optional<User> findByPhoneNumber(String phoneNumber);
 }
