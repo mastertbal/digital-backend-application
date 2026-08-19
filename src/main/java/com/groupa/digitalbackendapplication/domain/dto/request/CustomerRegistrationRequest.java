@@ -30,6 +30,7 @@ public class CustomerRegistrationRequest {
     private String email;
 
     @NotBlank(message = "Password cannot be null or empty")
+    @Pattern(regexp = "^(?=.*\\d).{11,16}$", message = "Password should contain at least one number, one letter and must be 11 to 16 characters")
     private String password;
 
     @NotBlank(message = "Phone number cannot be null or empty")
