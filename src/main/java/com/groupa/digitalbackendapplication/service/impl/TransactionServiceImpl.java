@@ -11,6 +11,7 @@ import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.CardDetailsRepository;
+import com.groupa.digitalbackendapplication.repository.DailyTransactionsRepository;
 import com.groupa.digitalbackendapplication.repository.TransactionRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.DepositService;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +42,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
     private final CardDetailsRepository cardDetailsRepository;
     private final AccountRepository accountRepository;
+    private final DailyTransactionsRepository dailyTransactionsRepository;
     private final DepositService depositService;
     private final TierLimiterUtil tierLimiterUtil;
     private final SecurityUtil securityUtil;
@@ -59,7 +62,7 @@ public class TransactionServiceImpl implements TransactionService {
         tierLimiterUtil.validateDailyTransferLimit(sourceAccount, payload.amount());
 
         if (payload.amount().compareTo(sourceAccount.getBalance()) > 0)
-            throw new BadRequestException("Insufficient funds available in account");
+            throw new BadRequestException("Insufficient funds in account");
 
         Transaction senderTransaction = TransactionUtil.buildTransactionEntity(TransactionType.TRANSFER, TransactionStatus.SUCCESSFUL, sourceAccount,
                 destinationAccount, payload.amount(), payload.description().trim());
@@ -99,6 +102,13 @@ public class TransactionServiceImpl implements TransactionService {
         senderTransaction = transactionRepository.save(senderTransaction);
         transactionRepository.save(receiverTransaction);
 
+        //Update daily transactions table
+        DailyTransactions dailyTransactions = fetchDailyTransactionEntity();
+        dailyTransactions.setTotalCredit(dailyTransactions.getTotalCredit().add(payload.amount()));
+        dailyTransactions.setTotalDebit(dailyTransactions.getTotalDebit().add(payload.amount()));
+
+        dailyTransactionsRepository.save(dailyTransactions);
+
         return ResponseWrapper.<TransactionStatusResponse>builder()
                 .data(buildTransactionResponse(senderTransaction.getTransactionStatus()))
                 .message("Transaction successful")
@@ -128,6 +138,10 @@ public class TransactionServiceImpl implements TransactionService {
         if (cardDetails.transactionStatus() == TransactionStatus.SUCCESSFUL) {
             Transaction savedTransaction = depositService.buildSuccessfulDeposit(destinationAccount, payload);
 
+            //Update daily transactions table
+            DailyTransactions dailyTransactions = fetchDailyTransactionEntity();
+            dailyTransactions.setTotalCredit(dailyTransactions.getTotalCredit().add(payload.depositAmount()));
+            dailyTransactionsRepository.save(dailyTransactions);
             return ResponseWrapper.<TransactionStatusResponse>builder()
                     .data(buildTransactionResponse(savedTransaction.getTransactionStatus()))
                     .message("Deposit Successful")
@@ -162,6 +176,10 @@ public class TransactionServiceImpl implements TransactionService {
         if (updatedTransactionStatus == TransactionStatus.SUCCESSFUL) {
             Account account = transaction.getDestinationAccount();
             account.setBalance(account.getBalance().add(transaction.getAmountTransferred()));
+            //Update daily transactions table
+            DailyTransactions dailyTransactions = fetchDailyTransactionEntity();
+            dailyTransactions.setTotalCredit(dailyTransactions.getTotalCredit().add(transaction.getAmountTransferred()));
+            dailyTransactionsRepository.save(dailyTransactions);
         }
 
         List<LedgerEntry> existingLedgerEntries = new ArrayList<>(transaction.getLedgerEntries());
@@ -234,6 +252,11 @@ public class TransactionServiceImpl implements TransactionService {
 
     private TransactionStatusResponse buildTransactionResponse(TransactionStatus transactionStatus) {
         return new TransactionStatusResponse(transactionStatus);
+    }
+
+    private DailyTransactions fetchDailyTransactionEntity(){
+        return dailyTransactionsRepository.getDailyTransactionsByDate(LocalDate.now())
+                .orElse(new DailyTransactions(BigDecimal.valueOf(0), BigDecimal.valueOf(0)));
     }
 
     private Account getAuthenticatedUser() {

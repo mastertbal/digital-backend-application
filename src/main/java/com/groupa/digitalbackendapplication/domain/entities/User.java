@@ -28,22 +28,22 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "first_name",nullable = false)
+    @Column(name = "first_name",nullable = false, length = 50)
     private String firstName;
 
-    @Column(name = "last_name", nullable = false)
+    @Column(name = "last_name", nullable = false, length = 50)
     private String lastName;
 
-    @Column(name = "email", unique = true, nullable = false)
+    @Column(name = "email", unique = true, nullable = false, length = 50)
     private String email;
 
-    @Column(name = "password", nullable = false)
+    @Column(name = "password", nullable = false, length = 65)
     private String password;
 
-    @Column(name = "phone_number", unique = true, nullable = false)
+    @Column(name = "phone_number", unique = true, nullable = false, length = 25)
     private String phoneNumber;
 
-    @Column(name = "gender")
+    @Column(name = "gender", length = 25, nullable = false)
     @Enumerated(value = EnumType.STRING)
     private Gender gender;
 
@@ -52,7 +52,7 @@ public class User {
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateOfBirth;
 
-    @Column(name = "role", nullable = false)
+    @Column(name = "role", nullable = false, length = 25)
     @Enumerated(value = EnumType.STRING)
     private Role role;
 
@@ -60,7 +60,8 @@ public class User {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
+    @UpdateTimestamp
     private LocalDateTime updatedAt;
 
     @PreUpdate

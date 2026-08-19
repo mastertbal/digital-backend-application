@@ -14,7 +14,7 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "login_session")
+@Table(name = "login_sessions")
 public class LoginSession {
 
     @Id

@@ -26,28 +26,28 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "owner_id", unique = true)
+    @Column(name = "owner_id", unique = true, nullable = false)
     private UUID ownerId;
 
-    @Column(name = "account_status")
+    @Column(name = "account_status", nullable = false, length = 25)
     @Enumerated(value = EnumType.STRING)
     private AccountStatus accountStatus;
 
-    @Column(name = "account_number", unique = true, nullable = false)
+    @Column(name = "account_number", unique = true, nullable = false, length = 25)
     private String accountNumber;
 
-    @Column(name = "balance")
+    @Column(name = "balance", nullable = false, precision = 19, scale = 2)
     private BigDecimal balance;
 
-    @Column(name = "account_tier")
+    @Column(name = "account_tier", nullable = false, length = 25)
     @Enumerated(value = EnumType.STRING)
     private AccountTier accountTier;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }

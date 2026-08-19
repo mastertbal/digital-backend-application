@@ -24,11 +24,11 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "transaction_type", nullable = false)
+    @Column(name = "transaction_type", nullable = false, length = 25)
     @Enumerated(value = EnumType.STRING)
     private TransactionType transactionType;
 
-    @Column(name = "transaction_status", nullable = false)
+    @Column(name = "transaction_status", nullable = false, length = 25)
     @Enumerated(value = EnumType.STRING)
     private TransactionStatus transactionStatus;
 
@@ -40,10 +40,10 @@ public class Transaction {
     @JoinColumn(name = "destination_account", referencedColumnName = "account_number", nullable = false)
     private Account destinationAccount;
 
-    @Column(name = "amount_transferred", nullable = false)
+    @Column(name = "amount_transferred", nullable = false, precision = 19, scale = 2)
     private BigDecimal amountTransferred;
 
-    @Column(name = "description", nullable = false)
+    @Column(name = "description", nullable = false, length = 50)
     private String description;
 
     @Column(name = "created_at", nullable = false)

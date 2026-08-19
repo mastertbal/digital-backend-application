@@ -18,12 +18,12 @@ import java.time.LocalDateTime;
 @ToString
 public class Customer extends User{
 
-    @Column(name = "address", nullable = false)
+    @Column(name = "address", nullable = false, length = 100)
     private String address;
 
-    @Column(name = "nin", unique = true)
+    @Column(name = "nin", unique = true,  length = 25)
     private String nin;
 
-    @Column(name = "bvn", unique = true)
+    @Column(name = "bvn", unique = true, length = 25)
     private String bvn;
 }

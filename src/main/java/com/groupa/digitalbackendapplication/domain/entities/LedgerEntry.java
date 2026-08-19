@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "ledger_entry")
+@Table(name = "ledger_entries")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -31,7 +31,7 @@ public class LedgerEntry {
     @JoinColumn(name = "transaction_id", nullable = false)
     private Transaction transaction; //Meant to link back to the transaction table that generated this entry
 
-    @Column(name = "entry_type", nullable = false)
+    @Column(name = "entry_type", nullable = false, length = 25)
     @Enumerated(value = EnumType.STRING)
     private EntryType entryType;
 
@@ -39,7 +39,7 @@ public class LedgerEntry {
     @Enumerated(value = EnumType.STRING)
     private LedgerEntryStatus status;
 
-    @Column(name = "amount", nullable = false)
+    @Column(name = "amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
     @Column(name = "created_at", nullable = false)
