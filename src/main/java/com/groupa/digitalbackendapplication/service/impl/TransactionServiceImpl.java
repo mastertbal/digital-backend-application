@@ -52,9 +52,16 @@ public class TransactionServiceImpl implements TransactionService {
     public ResponseWrapper<TransactionStatusResponse> transferFunds(@Valid TransferFundsRequest payload) {
         Account sourceAccount = getAuthenticatedUser();
 
+        if(!isAccountActive(sourceAccount.getAccountNumber()))
+            throw new BadRequestException("Your account is " + sourceAccount.getAccountStatus().name() + ". contact bank to rectify");
+
         //Does destination Account exists
         Account destinationAccount = accountRepository.findByAccountNumber(payload.destinationAccount().trim())
                 .orElseThrow(() -> new ResourceNotFoundException("Account number does not exist"));
+
+        if(!isAccountActive(destinationAccount.getAccountNumber()))
+            throw new BadRequestException("Can not transfer to this account");
+
 
         //Check if account balance isn't above tier maximum balance
         tierLimiterUtil.validateNotAlreadyOverTierMaxBalance(sourceAccount);
@@ -121,6 +128,9 @@ public class TransactionServiceImpl implements TransactionService {
     public ResponseWrapper<TransactionStatusResponse> depositFunds(@Valid CardDetailsRequest payload) {
         Account destinationAccount = getAuthenticatedUser();
 
+        if(!isAccountActive(destinationAccount.getAccountNumber()))
+            throw new BadRequestException("Your account is " + destinationAccount.getAccountStatus().name() + ". contact bank to rectify");
+
         if (payload.depositAmount().compareTo(BigDecimal.valueOf(100)) < 0)
             throw new BadRequestException("Deposit amount cannot be less than 100");
 
@@ -161,6 +171,11 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public ResponseWrapper<TransactionStatusResponse> requeryTransaction(UUID id) {
+        Account loggedInAccount = getAuthenticatedUser();
+
+        if(!isAccountActive(loggedInAccount.getAccountNumber()))
+            throw new BadRequestException("Your account is " + loggedInAccount.getAccountStatus().name() + ". contact bank to rectify");
+
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction does not exist"));
 
@@ -212,6 +227,9 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public ResponseWrapper<List<TransactionHistoryResponseDto>> getAllTransactionHistory() {
         Account account = getAuthenticatedUser();
+
+        if(!isAccountActive(account.getAccountNumber()))
+            throw new BadRequestException("Your account is " + account.getAccountStatus().name() + ". contact bank to rectify");
 
         List<TransactionHistoryResponseDto> transactions = transactionRepository.findAllByDestinationAccount(account)
                 .stream().map(tran -> new TransactionHistoryResponseDto(tran.getId(),
@@ -265,5 +283,12 @@ public class TransactionServiceImpl implements TransactionService {
 
         return accountRepository.findByOwnerId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+    }
+
+    private boolean isAccountActive(String accountNumber){
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(()-> new ResourceNotFoundException("Account not found"));
+
+        return account.getAccountStatus() == AccountStatus.ACTIVE;
     }
 }
