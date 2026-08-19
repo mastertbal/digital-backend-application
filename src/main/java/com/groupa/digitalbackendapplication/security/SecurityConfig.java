@@ -27,9 +27,8 @@ public class SecurityConfig {
                         reqConfigurer.requestMatchers(
                                 "/api/auth/**",
                                         "/api/account/create-personal-account",
-                                        "/api/admin/create-Admin",
                                         "/api/business/createaccount",
-                                        "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources/**", "/webjars/**").permitAll()
+                                        "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-resources/**", "/webjars/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(sessionConfigurer -> sessionConfigurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

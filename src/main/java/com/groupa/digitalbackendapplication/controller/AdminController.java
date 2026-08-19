@@ -3,10 +3,7 @@ package com.groupa.digitalbackendapplication.controller;
 import com.groupa.digitalbackendapplication.domain.dto.request.AccountSuspensionRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.KycRejectionRequest;
-import com.groupa.digitalbackendapplication.domain.dto.response.AdminCreationResponse;
-import com.groupa.digitalbackendapplication.domain.dto.response.KycDto;
-import com.groupa.digitalbackendapplication.domain.dto.response.KycResolveResponse;
-import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
+import com.groupa.digitalbackendapplication.domain.dto.response.*;
 import com.groupa.digitalbackendapplication.service.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -27,9 +24,11 @@ public class AdminController {
 
     private final AdminService adminService;
 
-    @PostMapping("/create-Admin")
-    public ResponseWrapper<AdminCreationResponse> createAdmin(@Valid @RequestBody AdminCreationRequest payload){
-        return adminService.createAdmin(payload);
+
+    @Operation(security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/admin-profile")
+    public ResponseWrapper<AdminDto> getAdminProfile(){
+        return adminService.getAdminProfile();
     }
 
     @Operation(security = @SecurityRequirement(name = "bearerAuth"))

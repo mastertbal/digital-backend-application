@@ -3,10 +3,7 @@ package com.groupa.digitalbackendapplication.service.impl;
 import com.groupa.digitalbackendapplication.domain.dto.request.AccountSuspensionRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.KycRejectionRequest;
-import com.groupa.digitalbackendapplication.domain.dto.response.AdminCreationResponse;
-import com.groupa.digitalbackendapplication.domain.dto.response.KycDto;
-import com.groupa.digitalbackendapplication.domain.dto.response.KycResolveResponse;
-import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
+import com.groupa.digitalbackendapplication.domain.dto.response.*;
 import com.groupa.digitalbackendapplication.domain.entities.Account;
 import com.groupa.digitalbackendapplication.domain.entities.Admin;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
@@ -20,8 +17,11 @@ import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.AdminRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.repository.KycEntityRepository;
+import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.AdminService;
 import com.groupa.digitalbackendapplication.utils.EncryptionUtil;
+import com.groupa.digitalbackendapplication.utils.LoginSessionUtil;
+import com.groupa.digitalbackendapplication.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -51,6 +51,8 @@ public class AdminServiceImpl implements AdminService {
     private final AccountRepository accountRepository;
     private final EmailService emailService;
     private final EncryptionUtil encryptionUtil;
+    private final LoginSessionUtil loginSessionUtil;
+    private final SecurityUtil securityUtil;
 
 
     @Override
@@ -70,10 +72,35 @@ public class AdminServiceImpl implements AdminService {
                 payload.password(), payload.phoneNumber(), role, payload.gender(), payload.dateOfBirth(),
                 payload.address());
 
+        try {
+            String emailSubject = "Admin account Creation";
+            String emailBody = "Dear " + payload.firstName() + " " + payload.lastName().toUpperCase(Locale.ROOT) + ", your admin account has successfully been created. Your Admin ID: " + response.getAdminId();
+            sendWelcomeMail(payload.email(), emailSubject, emailBody);
+        } catch (Exception e){
+            log.error("Welcome email failed to send to {}: {}", payload.email(), e.getMessage());
+        }
+
         return ResponseWrapper.<AdminCreationResponse>builder()
                 .data(response)
                 .message("Admin creation successful")
                 .statusCode(HttpStatus.CREATED)
+                .build();
+    }
+
+    @Override
+    public ResponseWrapper<AdminDto> getAdminProfile() {
+        AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
+        loginSessionUtil.verify(loggedInUser.getUser().getId());
+
+        Admin admin = adminRepository.findById(loggedInUser.getUser().getId())
+                .orElseThrow(()-> new ResourceNotFoundException("Admin not found"));
+
+        AdminDto dto = buildAdminDto(admin);
+
+        return ResponseWrapper.<AdminDto>builder()
+                .data(dto)
+                .message("Fetch admin profile successfully")
+                .statusCode(HttpStatus.OK)
                 .build();
     }
 
@@ -248,6 +275,20 @@ public class AdminServiceImpl implements AdminService {
         return new AdminCreationResponse(savedAdmin.getFirstName(), adminId);
     }
 
+    private AdminDto buildAdminDto(Admin admin){
+        return AdminDto.builder()
+                .adminId(admin.getAdminId())
+                .firstName(admin.getFirstName())
+                .lastName(admin.getLastName())
+                .email(admin.getEmail())
+                .phoneNumber(admin.getPhoneNumber())
+                .gender(admin.getGender())
+                .dateOfBirth(admin.getDateOfBirth())
+                .role(admin.getRole())
+                .address(admin.getAddress())
+                .build();
+    }
+
     private boolean validatePhoneNumber(String phoneNumber){
         Optional<Admin> adminOptional = adminRepository.findAdminByPhoneNumber(phoneNumber);
         return adminOptional.isPresent();
@@ -295,6 +336,16 @@ public class AdminServiceImpl implements AdminService {
                 .recipient(email)
                 .subject(emailSubject)
                 .messageBody(kycResolution)
+                .build();
+        emailService.sendEmail(emailDetails);
+    }
+
+    private void sendWelcomeMail(String email, String emailSubject, String emailBody){
+
+        EmailDetails emailDetails = EmailDetails.builder()
+                .recipient(email)
+                .subject(emailSubject)
+                .messageBody(emailBody)
                 .build();
         emailService.sendEmail(emailDetails);
     }

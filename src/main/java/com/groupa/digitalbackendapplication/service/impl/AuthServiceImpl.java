@@ -1,5 +1,8 @@
 package com.groupa.digitalbackendapplication.service.impl;
 
+import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
+import com.groupa.digitalbackendapplication.domain.dto.response.AdminCreationResponse;
+import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
 import com.groupa.digitalbackendapplication.domain.entities.Admin;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
 import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
@@ -14,6 +17,7 @@ import com.groupa.digitalbackendapplication.repository.UserRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.security.CustomUserDetailsService;
 import com.groupa.digitalbackendapplication.security.TokenService;
+import com.groupa.digitalbackendapplication.service.AdminService;
 import com.groupa.digitalbackendapplication.service.AuthService;
 import com.groupa.digitalbackendapplication.service.LoginSessionService;
 import com.groupa.digitalbackendapplication.service.RefreshSessionService;
@@ -43,6 +47,12 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshSessionService refreshSessionService;
     private final LoginSessionService loginSessionService;
     private final AdminRepository adminRepository;
+    private final AdminService adminService;
+
+    @Override
+    public ResponseWrapper<AdminCreationResponse> createAdmin(AdminCreationRequest payload) {
+        return adminService.createAdmin(payload);
+    }
 
     @Override
     public Response<LoginResponse> loginUser(LoginRequest loginRequest) {

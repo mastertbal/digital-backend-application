@@ -1,5 +1,8 @@
 package com.groupa.digitalbackendapplication.controller;
 
+import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
+import com.groupa.digitalbackendapplication.domain.dto.response.AdminCreationResponse;
+import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
 import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
 import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
 import com.groupa.digitalbackendapplication.domain.response.LogoutResponse;
@@ -20,6 +23,11 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+
+    @PostMapping("/create-Admin")
+    public ResponseWrapper<AdminCreationResponse> createAdmin(@Valid @RequestBody AdminCreationRequest payload){
+        return authService.createAdmin(payload);
+    }
 
     @PostMapping(path = "/login")
     public ResponseEntity<Response<LoginResponse>> loginUser(
