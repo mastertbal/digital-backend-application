@@ -6,6 +6,7 @@ import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
 import com.groupa.digitalbackendapplication.domain.entities.Account;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
 import com.groupa.digitalbackendapplication.domain.entities.KycEntity;
+import com.groupa.digitalbackendapplication.domain.entities.User;
 import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
 import com.groupa.digitalbackendapplication.domain.enums.KycDocumentType;
 import com.groupa.digitalbackendapplication.domain.enums.KycStatus;
@@ -13,6 +14,7 @@ import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
+import com.groupa.digitalbackendapplication.repository.UserRepository;
 import com.groupa.digitalbackendapplication.repository.KycEntityRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.KycService;
@@ -20,6 +22,7 @@ import com.groupa.digitalbackendapplication.utils.EncryptionUtil;
 import com.groupa.digitalbackendapplication.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -33,6 +36,7 @@ public class KycServiceImpl implements KycService {
 
     private final SecurityUtil securityUtil;
     private final KycEntityRepository kycEntityRepository;
+    private final UserRepository userRepository;
     private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
     private final EncryptionUtil encryptionUtil;
@@ -43,13 +47,13 @@ public class KycServiceImpl implements KycService {
     public ResponseWrapper<KycSubmissionResponse> submitKyc(KycSubmissionRequest payload) {
         AccountTier resultingTier;
         AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
-        Customer customer = loggedInUser.getCustomer();
-        Account account = accountRepository.findByOwnerId(customer.getId())
+        User user = loggedInUser.getUser();
+        Account account = accountRepository.findByOwnerId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         Optional<String> validationError = validate(payload.getDocumentType(), payload.getSubmittedValue());
         if (validationError.isPresent()){
-            KycSubmissionResponse message = buildKycEntity(customer.getId(),account.getId(),payload.getDocumentType(),
+            KycSubmissionResponse message = buildKycEntity(user.getId(),account.getId(),payload.getDocumentType(),
                     payload.getSubmittedValue(),KycStatus.REJECTED, validationError.get(),
                     null);
 
@@ -59,6 +63,9 @@ public class KycServiceImpl implements KycService {
                     .statusCode(HttpStatus.NOT_ACCEPTABLE)
                     .build();
         }
+
+        Customer customer = customerRepository.findById(user.getId())
+                .orElseThrow(() -> new BadCredentialsException("Customer not found"));
 
         AccountTier tier = recomputeEligibleTier(customer);
 
@@ -139,7 +146,7 @@ public class KycServiceImpl implements KycService {
             customer.setBvn(encryptionUtil.encrypt(submittedValue));
             customer.setUpdatedAt(LocalDateTime.now());
         }
-        customerRepository.save(customer);
+        userRepository.save(customer);
     }
 
     private AccountTier recomputeEligibleTier(Customer customer) {

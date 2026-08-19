@@ -1,6 +1,5 @@
 package com.groupa.digitalbackendapplication.service.impl;
 
-import com.groupa.digitalbackendapplication.domain.dto.response.CustomerDto;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
 import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
 import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
@@ -9,6 +8,7 @@ import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
+import com.groupa.digitalbackendapplication.repository.UserRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.security.CustomUserDetailsService;
 import com.groupa.digitalbackendapplication.security.TokenService;
@@ -20,7 +20,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.converter.json.GsonBuilderUtils;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,7 +27,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -54,8 +52,8 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Password does not match");
         }
 
-        String role = authUser.getCustomer().getRole().name();
-        UUID userId = authUser.getCustomer().getId();
+        String role = authUser.getUser().getRole().name();
+        UUID userId = authUser.getUser().getId();
 
         String token = tokenService.generateToken(authUser.getUsername());
         String refreshToken = tokenService.generateRefreshToken(authUser.getUsername());
@@ -147,7 +145,7 @@ public class AuthServiceImpl implements AuthService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         AuthUser authUser = (AuthUser) authentication.getPrincipal();
-        UUID userId = authUser.getCustomer().getId();
+        UUID userId = authUser.getUser().getId();
 
         loginSessionService.invalidateLoginSession(userId);
 

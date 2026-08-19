@@ -216,9 +216,9 @@ public class TransactionServiceImpl implements TransactionService {
 
     private Account getAuthenticatedUser() {
         AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
-        Customer customer = loggedInUser.getCustomer();
+        User user = loggedInUser.getUser();
 
-        return accountRepository.findByOwnerId(customer.getId())
+        return accountRepository.findByOwnerId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
     }
 }

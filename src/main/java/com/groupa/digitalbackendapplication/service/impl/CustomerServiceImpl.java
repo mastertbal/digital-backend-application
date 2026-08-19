@@ -4,6 +4,7 @@ import com.groupa.digitalbackendapplication.domain.dto.request.CustomerRegistrat
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
 import com.groupa.digitalbackendapplication.domain.entities.Account;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
+import com.groupa.digitalbackendapplication.domain.entities.User;
 import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
 import com.groupa.digitalbackendapplication.domain.enums.Gender;
@@ -14,6 +15,7 @@ import com.groupa.digitalbackendapplication.notification.EmailDetails;
 import com.groupa.digitalbackendapplication.notification.EmailService;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
+import com.groupa.digitalbackendapplication.repository.UserRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.CustomerService;
 import com.groupa.digitalbackendapplication.service.LoginSessionService;
@@ -40,6 +42,7 @@ import java.util.UUID;
 
 public class CustomerServiceImpl implements CustomerService {
 
+    private final UserRepository userRepository;
     private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
     private final AccountUtil accountUtil;
@@ -60,7 +63,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         if(validatePhoneNumber(payload.getPhoneNumber())) throw new BadRequestException("Error occurred: please provide another phone number");
 
-        Optional<Customer> customerOptional = customerRepository.findByEmail(payload.getEmail());
+        Optional<User> customerOptional = userRepository.findByEmail(payload.getEmail());
         if(customerOptional.isPresent()) throw new BadRequestException("Error occurred: please provide another email");
 
         SavedCustomerResponse userResponse = buildCustomerDetails(
@@ -101,7 +104,7 @@ public class CustomerServiceImpl implements CustomerService {
         if(validatePhoneNumber(payload.getPhoneNumber())) throw
                 new BadRequestException("Error occurred: please provide another phone number");
 
-        Optional<Customer> customerOptional = customerRepository.findByEmail(payload.getEmail());
+        Optional<User> customerOptional = userRepository.findByEmail(payload.getEmail());
         if(customerOptional.isPresent()) throw new BadRequestException("Error occurred: please provide another email");
 
         SavedCustomerResponse userResponse = buildCustomerDetails(
@@ -124,27 +127,30 @@ public class CustomerServiceImpl implements CustomerService {
     public Response<CustomerDto> getUserProfile() {
         AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
 
-        return getUserProfileById(loggedInUser.getCustomer().getId());
+        return getUserProfileById(loggedInUser.getUser().getId());
     }
 
     @Override
     public Response<CustomerDto> getUserProfileById(UUID userId) {
 
-        Optional<Customer> customerOptional = customerRepository.findById(userId);
+        Optional<User> userOptional =  userRepository.findById(userId);
 
-        Customer customer = customerOptional.get();
+        User user = userOptional.get();
 
-        loginSessionUtil.verify(customer.getId());
+        loginSessionUtil.verify(user.getId());
+
+        Customer customer = customerRepository.findById(user.getId())
+                .orElseThrow(() -> new BadRequestException("Cannot find user"));
 
         CustomerDto customerDto = CustomerDto.builder()
-                .id(customer.getId())
-                .firstName(customer.getFirstName())
-                .lastName(customer.getLastName())
-                .email(customer.getEmail())
-                .phoneNumber(customer.getPhoneNumber())
-                .gender(customer.getGender())
-                .dateOfBirth(customer.getDateOfBirth())
-                .role(customer.getRole())
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .gender(user.getGender())
+                .dateOfBirth(user.getDateOfBirth())
+                .role(user.getRole())
                 .address(customer.getAddress())
                 .nin(encryptionUtil.decrypt(customer.getNin()))
                 .bvn(encryptionUtil.decrypt(customer.getBvn()))
@@ -172,7 +178,7 @@ public class CustomerServiceImpl implements CustomerService {
                 .bvn(null)
                 .nin(null)
                 .build();
-        Customer savedCustomer = customerRepository.save(customer);
+        Customer savedCustomer = userRepository.save(customer);
         return new SavedCustomerResponse(savedCustomer.getId());
     }
 
@@ -230,8 +236,8 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     private boolean validatePhoneNumber(String phoneNumber){
-        Optional<Customer> customerOptional = customerRepository.findByPhoneNumber(phoneNumber);
-        return customerOptional.isPresent();
+        Optional<User> userOptional = userRepository.findByPhoneNumber(phoneNumber);
+        return userOptional.isPresent();
     }
 
     private boolean validateAge(LocalDate dateOfBirth){
