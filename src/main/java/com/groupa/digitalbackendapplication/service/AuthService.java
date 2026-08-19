@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public interface AuthService {
     Response<LoginResponse> loginUser(LoginRequest loginRequest);
+    Response<LoginResponse> loginAdmin(LoginRequest payload, String adminId);
     Response<LoginResponse> getNewAccessToken(HttpServletRequest request, HttpServletResponse response);
     Response<LogoutResponse> logout();
 }

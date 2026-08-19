@@ -245,7 +245,7 @@ public class AdminServiceImpl implements AdminService {
                 .address(address)
                 .build();
         Admin savedAdmin = adminRepository.save(admin);
-        return new AdminCreationResponse(savedAdmin.getFirstName());
+        return new AdminCreationResponse(savedAdmin.getFirstName(), adminId);
     }
 
     private boolean validatePhoneNumber(String phoneNumber){

@@ -45,7 +45,6 @@ import java.util.UUID;
 
 public class CustomerServiceImpl implements CustomerService {
 
-    private final UserRepository userRepository;
     private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
     private final AccountUtil accountUtil;
@@ -64,8 +63,9 @@ public class CustomerServiceImpl implements CustomerService {
 
         if(validatePhoneNumber(payload.getPhoneNumber())) throw new BadRequestException("Error occurred: please provide another phone number");
 
-        Optional<User> customerOptional = userRepository.findByEmail(payload.getEmail());
-        if(customerOptional.isPresent()) throw new BadRequestException("Error occurred: please provide another email");
+        Optional<Customer> customerOptional = customerRepository.findByEmail(payload.getEmail());
+        if(customerOptional.isPresent())
+            throw new BadRequestException("Error occurred: please provide another email");
 
         SavedCustomerResponse userResponse = buildCustomerDetails(
                 payload.getFirstName(), payload.getLastName(), payload.getEmail(), payload.getPassword(),
@@ -93,59 +93,24 @@ public class CustomerServiceImpl implements CustomerService {
                 .build();
     }
 
-    @Override
-    public ResponseWrapper<AccountCreatedResponse> createAdminAccount(CustomerRegistrationRequest payload) {
-        Role userRole = Role.ADMIN;
-        AccountStatus accountStatus = AccountStatus.ACTIVE;
-        AccountTier accountTier = AccountTier.TIER_1;
-
-        if(validateAge(payload.getDateOfBirth())) throw
-        new BadRequestException("User must be at least 18 years old");
-
-        if(validatePhoneNumber(payload.getPhoneNumber())) throw
-                new BadRequestException("Error occurred: please provide another phone number");
-
-        Optional<User> customerOptional = userRepository.findByEmail(payload.getEmail());
-        if(customerOptional.isPresent()) throw new BadRequestException("Error occurred: please provide another email");
-
-        SavedCustomerResponse userResponse = buildCustomerDetails(
-                payload.getFirstName(), payload.getLastName(), payload.getEmail(), payload.getPassword(),
-                payload.getPhoneNumber(), userRole, payload.getGender(), payload.getDateOfBirth(), payload.getAddress());
-
-        String accountNumber = accountUtil.generateAccountNumber();
-        //Continue account creation
-
-        AccountCreatedResponse createAccount = buildAccount(userResponse.getCustomerId(), accountStatus, accountNumber, accountTier);
-
-        return ResponseWrapper.<AccountCreatedResponse>builder()
-                .data(createAccount)
-                .message("Account Creation Successful")
-                .statusCode(HttpStatus.CREATED)
-                .build();
-    }
 
     @Override
     public Response<CustomerDto> getUserProfile() {
         AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
-        loginSessionUtil.verify(loggedInUser.getCustomer().getId());
-        return getUserProfileById(loggedInUser.getCustomer().getId());
+        loginSessionUtil.verify(loggedInUser.getUser().getId());
+        return getUserProfileById(loggedInUser.getUser().getId());
     }
 
     @Override
     public Response<CustomerDto> getUserProfileById(UUID userId) {
 
-        Optional<User> userOptional =  userRepository.findById(userId);
         Customer customer = customerRepository.findById(userId)
                 .orElseThrow(()-> new ResourceNotFoundException("User not found"));
 
-        User user = userOptional.get();
         Account account = accountRepository.findByOwnerId(customer.getId())
                 .orElseThrow(()-> new ResourceNotFoundException("Account not found"));
 
-        loginSessionUtil.verify(user.getId());
 
-        Customer customer = customerRepository.findById(user.getId())
-                .orElseThrow(() -> new BadRequestException("Cannot find user"));
         AccountDto accountDto = AccountDto.builder()
                 .id(account.getId())
                 .accountNumber(account.getAccountNumber())
@@ -180,7 +145,7 @@ public class CustomerServiceImpl implements CustomerService {
     public ResponseWrapper<String> changePassword(ChangePasswordRequest payload) {
         AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
 
-        Customer customer  = customerRepository.findById(loggedInUser.getCustomer().getId())
+        Customer customer  = customerRepository.findById(loggedInUser.getUser().getId())
                 .orElseThrow(()-> new ResourceNotFoundException("User not found"));
 
         if(!payload.newPassword().equals(payload.confirmPassword()))
@@ -273,7 +238,4 @@ public class CustomerServiceImpl implements CustomerService {
         return customerOptional.isPresent();
     }
 
-    private boolean validateAge(LocalDate dateOfBirth){
-        return Period.between(dateOfBirth, LocalDate.now()).getYears() < 18;
-    }
 }

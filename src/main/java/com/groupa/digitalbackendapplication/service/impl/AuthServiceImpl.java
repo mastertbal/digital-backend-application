@@ -1,5 +1,6 @@
 package com.groupa.digitalbackendapplication.service.impl;
 
+import com.groupa.digitalbackendapplication.domain.entities.Admin;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
 import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
 import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
@@ -7,6 +8,7 @@ import com.groupa.digitalbackendapplication.domain.response.LogoutResponse;
 import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
+import com.groupa.digitalbackendapplication.repository.AdminRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.repository.UserRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
@@ -40,6 +42,7 @@ public class AuthServiceImpl implements AuthService {
     private final CustomUserDetailsService customUserDetailsService;
     private final RefreshSessionService refreshSessionService;
     private final LoginSessionService loginSessionService;
+    private final AdminRepository adminRepository;
 
     @Override
     public Response<LoginResponse> loginUser(LoginRequest loginRequest) {
@@ -49,6 +52,47 @@ public class AuthServiceImpl implements AuthService {
         AuthUser authUser = (AuthUser) customUserDetailsService.loadUserByUsername(email);
 
         if (!passwordEncoder.matches(password, authUser.getPassword())) {
+            throw new BadRequestException("Password does not match");
+        }
+
+        String role = authUser.getUser().getRole().name();
+        UUID userId = authUser.getUser().getId();
+
+        String token = tokenService.generateToken(authUser.getUsername());
+        String refreshToken = tokenService.generateRefreshToken(authUser.getUsername());
+
+        String sessionId = LocalDateTime.now().toString();
+
+        refreshSessionService.createLoginSession(sessionId, userId);
+
+        loginSessionService.saveLoginSession(userId);
+
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(authUser, null, authUser.getAuthorities());
+
+        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+
+        LoginResponse loginResponse = LoginResponse.builder()
+                .role(role)
+                .accessToken(token)
+                .refreshToken(refreshToken)
+                .build();
+
+        return Response.<LoginResponse>builder()
+                .statusCode(HttpStatus.OK.value())
+                .message("Login successful")
+                .data(loginResponse)
+                .build();
+    }
+
+    @Override
+    public Response<LoginResponse> loginAdmin(LoginRequest payload, String adminId) {
+        Admin admin = adminRepository.findByAdminIdAndEmail(adminId, payload.getEmail())
+                .orElseThrow(()-> new ResourceNotFoundException("Admin not found"));
+
+        AuthUser authUser = (AuthUser) customUserDetailsService.loadUserByUsername(payload.getEmail());
+
+        if (!passwordEncoder.matches(payload.getPassword(), authUser.getPassword())) {
             throw new BadRequestException("Password does not match");
         }
 
