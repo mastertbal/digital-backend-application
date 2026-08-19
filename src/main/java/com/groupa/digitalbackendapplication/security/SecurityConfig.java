@@ -21,11 +21,10 @@ public class SecurityConfig {
     private final AuthFilter authFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http.csrf(csrfConfigurer -> csrfConfigurer.disable())
                 .authorizeHttpRequests(reqConfigurer ->
                         reqConfigurer.requestMatchers(
-                                "/api/daily-transactions/daily",
                                 "/api/auth/**",
                                         "/api/account/create-personal-account",
                                         "/api/account/create-admin-account",

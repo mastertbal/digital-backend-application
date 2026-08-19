@@ -30,7 +30,7 @@ public class Business {
     @Column(name = "cac_number", unique = true, nullable = false, length = 50)
     private String cacNumber;
 
-    @Column(name = "password", nullable = false, length = 50)
+    @Column(name = "password", nullable = false, length = 65)
     private String password;
 
     @Column(name = "business_email", unique = true, nullable = false, length = 50)

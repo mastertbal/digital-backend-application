@@ -37,7 +37,7 @@ public class User {
     @Column(name = "email", unique = true, nullable = false, length = 50)
     private String email;
 
-    @Column(name = "password", nullable = false, length = 50)
+    @Column(name = "password", nullable = false, length = 65)
     private String password;
 
     @Column(name = "phone_number", unique = true, nullable = false, length = 25)
@@ -60,7 +60,8 @@ public class User {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
+    @UpdateTimestamp
     private LocalDateTime updatedAt;
 
     @PreUpdate

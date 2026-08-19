@@ -2,7 +2,6 @@ package com.groupa.digitalbackendapplication.service.impl;
 
 import com.groupa.digitalbackendapplication.domain.dto.request.CardDetailsRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.TransferFundsRequest;
-import com.groupa.digitalbackendapplication.domain.dto.response.DailyTransactionResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
 import com.groupa.digitalbackendapplication.domain.dto.response.TransactionHistoryResponseDto;
 import com.groupa.digitalbackendapplication.domain.dto.response.TransactionStatusResponse;
@@ -63,7 +62,7 @@ public class TransactionServiceImpl implements TransactionService {
         tierLimiterUtil.validateDailyTransferLimit(sourceAccount, payload.amount());
 
         if (payload.amount().compareTo(sourceAccount.getBalance()) > 0)
-            throw new BadRequestException("Insufficient funds available in account");
+            throw new BadRequestException("Insufficient funds in account");
 
         Transaction senderTransaction = TransactionUtil.buildTransactionEntity(TransactionType.TRANSFER, TransactionStatus.SUCCESSFUL, sourceAccount,
                 destinationAccount, payload.amount(), payload.description().trim());
@@ -102,7 +101,14 @@ public class TransactionServiceImpl implements TransactionService {
 
         senderTransaction = transactionRepository.save(senderTransaction);
         transactionRepository.save(receiverTransaction);
-        //fixme: At this point, we also save the daily debit and daily credit to db
+
+        //Update daily transactions table
+        DailyTransactions dailyTransactions = fetchDailyTransactionEntity();
+        dailyTransactions.setTotalCredit(dailyTransactions.getTotalCredit().add(payload.amount()));
+        dailyTransactions.setTotalDebit(dailyTransactions.getTotalDebit().add(payload.amount()));
+
+        dailyTransactionsRepository.save(dailyTransactions);
+
         return ResponseWrapper.<TransactionStatusResponse>builder()
                 .data(buildTransactionResponse(senderTransaction.getTransactionStatus()))
                 .message("Transaction successful")
@@ -132,6 +138,10 @@ public class TransactionServiceImpl implements TransactionService {
         if (cardDetails.transactionStatus() == TransactionStatus.SUCCESSFUL) {
             Transaction savedTransaction = depositService.buildSuccessfulDeposit(destinationAccount, payload);
 
+            //Update daily transactions table
+            DailyTransactions dailyTransactions = fetchDailyTransactionEntity();
+            dailyTransactions.setTotalCredit(dailyTransactions.getTotalCredit().add(payload.depositAmount()));
+            dailyTransactionsRepository.save(dailyTransactions);
             return ResponseWrapper.<TransactionStatusResponse>builder()
                     .data(buildTransactionResponse(savedTransaction.getTransactionStatus()))
                     .message("Deposit Successful")
@@ -166,6 +176,10 @@ public class TransactionServiceImpl implements TransactionService {
         if (updatedTransactionStatus == TransactionStatus.SUCCESSFUL) {
             Account account = transaction.getDestinationAccount();
             account.setBalance(account.getBalance().add(transaction.getAmountTransferred()));
+            //Update daily transactions table
+            DailyTransactions dailyTransactions = fetchDailyTransactionEntity();
+            dailyTransactions.setTotalCredit(dailyTransactions.getTotalCredit().add(transaction.getAmountTransferred()));
+            dailyTransactionsRepository.save(dailyTransactions);
         }
 
         List<LedgerEntry> existingLedgerEntries = new ArrayList<>(transaction.getLedgerEntries());
@@ -218,6 +232,10 @@ public class TransactionServiceImpl implements TransactionService {
         return new TransactionStatusResponse(transactionStatus);
     }
 
+    private DailyTransactions fetchDailyTransactionEntity(){
+        return dailyTransactionsRepository.getDailyTransactionsByDate(LocalDate.now())
+                .orElse(new DailyTransactions(BigDecimal.valueOf(0), BigDecimal.valueOf(0)));
+    }
 
     private Account getAuthenticatedUser() {
         AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
