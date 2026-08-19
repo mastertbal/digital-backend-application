@@ -8,4 +8,5 @@ import lombok.Data;
 public class AdminCreationResponse {
 
     private String firstName;
+    private String adminId;
 }

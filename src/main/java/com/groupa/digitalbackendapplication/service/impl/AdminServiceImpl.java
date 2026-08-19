@@ -3,15 +3,13 @@ package com.groupa.digitalbackendapplication.service.impl;
 import com.groupa.digitalbackendapplication.domain.dto.request.AccountSuspensionRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.KycRejectionRequest;
-import com.groupa.digitalbackendapplication.domain.dto.response.AdminCreationResponse;
-import com.groupa.digitalbackendapplication.domain.dto.response.KycDto;
-import com.groupa.digitalbackendapplication.domain.dto.response.KycResolveResponse;
-import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
+import com.groupa.digitalbackendapplication.domain.dto.response.*;
 import com.groupa.digitalbackendapplication.domain.entities.Account;
 import com.groupa.digitalbackendapplication.domain.entities.Admin;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
 import com.groupa.digitalbackendapplication.domain.entities.KycEntity;
 import com.groupa.digitalbackendapplication.domain.enums.*;
+import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.notification.EmailDetails;
@@ -20,8 +18,13 @@ import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.AdminRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.repository.KycEntityRepository;
+import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.AdminService;
+import com.groupa.digitalbackendapplication.service.CustomerService;
+import com.groupa.digitalbackendapplication.service.TransactionService;
 import com.groupa.digitalbackendapplication.utils.EncryptionUtil;
+import com.groupa.digitalbackendapplication.utils.LoginSessionUtil;
+import com.groupa.digitalbackendapplication.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -51,6 +54,10 @@ public class AdminServiceImpl implements AdminService {
     private final AccountRepository accountRepository;
     private final EmailService emailService;
     private final EncryptionUtil encryptionUtil;
+    private final LoginSessionUtil loginSessionUtil;
+    private final SecurityUtil securityUtil;
+    private final CustomerService customerService;
+    private final TransactionService transactionService;
 
 
     @Override
@@ -70,11 +77,46 @@ public class AdminServiceImpl implements AdminService {
                 payload.password(), payload.phoneNumber(), role, payload.gender(), payload.dateOfBirth(),
                 payload.address());
 
+        try {
+            String emailSubject = "Admin account Creation";
+            String emailBody = "Dear " + payload.firstName() + " " + payload.lastName().toUpperCase(Locale.ROOT) + ", your admin account has successfully been created. Your Admin ID: " + response.getAdminId();
+            sendMail(payload.email(), emailSubject, emailBody);
+        } catch (Exception e){
+            log.error("Welcome email failed to send to {}: {}", payload.email(), e.getMessage());
+        }
+
         return ResponseWrapper.<AdminCreationResponse>builder()
                 .data(response)
                 .message("Admin creation successful")
                 .statusCode(HttpStatus.CREATED)
                 .build();
+    }
+
+    @Override
+    public ResponseWrapper<AdminDto> getAdminProfile() {
+        AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
+        loginSessionUtil.verify(loggedInUser.getUser().getId());
+
+        Admin admin = adminRepository.findById(loggedInUser.getUser().getId())
+                .orElseThrow(()-> new ResourceNotFoundException("Admin not found"));
+
+        AdminDto dto = buildAdminDto(admin);
+
+        return ResponseWrapper.<AdminDto>builder()
+                .data(dto)
+                .message("Fetch admin profile successfully")
+                .statusCode(HttpStatus.OK)
+                .build();
+    }
+
+    @Override
+    public Response<CustomerDto> getCustomerProfile(UUID customerId) {
+        return customerService.getUserProfileById(customerId);
+    }
+
+    @Override
+    public ResponseWrapper<TransactionHistoryResponseDto> getTransactionById(UUID transactionId) {
+        return transactionService.getTransactionById(transactionId);
     }
 
     @Override
@@ -139,7 +181,7 @@ public class AdminServiceImpl implements AdminService {
             String emailBody = "Congratulations, your KYC has been approved. Your account upgraded to tier " +
                     kyc.getResultingTier().name().toUpperCase(Locale.ROOT);
 
-            sendKycResolutionMail(customer.getEmail(), emailSubject, emailBody);
+            sendMail(customer.getEmail(), emailSubject, emailBody);
         } catch (Exception e){
             log.error("Kyc Approval email failed to send to {}: {}", customer.getEmail(), e.getMessage());
         }
@@ -170,7 +212,7 @@ public class AdminServiceImpl implements AdminService {
             String emailSubject = "KYC REJECTED";
             String emailBody = "Sorry your KYC request has been rejected due to " + payload.getReason();
 
-            sendKycResolutionMail(customer.getEmail(), emailSubject, emailBody);
+            sendMail(customer.getEmail(), emailSubject, emailBody);
         } catch (Exception e){
             log.error("Kyc rejection email failed to send to {}: {}", customer.getEmail(), e.getMessage());
         }
@@ -192,15 +234,17 @@ public class AdminServiceImpl implements AdminService {
             throw new RuntimeException("Account already frozen");
 
         account.setAccountStatus(AccountStatus.FROZEN);
+        account.setUpdatedAt(LocalDateTime.now());
         accountRepository.save(account);
 
         Customer customer = customerRepository.findById(account.getOwnerId())
                 .orElseThrow(()-> new ResourceNotFoundException("Error occurred"));
 
         try {
+            String emailSubject = "Account Suspended";
             String emailBody = "Dear " + customer.getFirstName() + " " + customer.getLastName().toUpperCase(Locale.ROOT) + " we regret to inform you that your account with account number: "
                     + account.getAccountNumber() + " has been suspended due to " + payload.suspensionReason();
-            sendSuspensionMail(customer.getEmail(), emailBody);
+            sendMail(customer.getEmail(), emailSubject, emailBody);
         } catch (Exception e){
             log.error("Suspension email failed to send to {}: {}", customer.getEmail(), e.getMessage());
         }
@@ -208,6 +252,49 @@ public class AdminServiceImpl implements AdminService {
         return ResponseWrapper.<String>builder()
                 .data(AccountStatus.FROZEN.name())
                 .message("Account successfully frozen")
+                .statusCode(HttpStatus.OK)
+                .build();
+    }
+
+    @Override
+    public ResponseWrapper<String> reactivateAccount(UUID accountId) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(()-> new ResourceNotFoundException("Account not found"));
+
+        if(account.getAccountStatus() == AccountStatus.ACTIVE)
+            throw new RuntimeException("Account already activated");
+
+        account.setAccountStatus(AccountStatus.ACTIVE);
+        account.setUpdatedAt(LocalDateTime.now());
+        accountRepository.save(account);
+
+        Customer customer = customerRepository.findById(account.getOwnerId())
+                .orElseThrow(()-> new ResourceNotFoundException("Error occurred"));
+
+        try {
+            String emailSubject = "Account Reactivated";
+            String emailBody = "Dear " + customer.getFirstName() + " " + customer.getLastName().toUpperCase(Locale.ROOT) + " Your account with account number: "
+                    + account.getAccountNumber() + " has been REACTIVATED";
+            sendMail(customer.getEmail(), emailSubject, emailBody);
+        } catch (Exception e){
+            log.error("Reactivation email failed to send to {}: {}", customer.getEmail(), e.getMessage());
+        }
+
+        return ResponseWrapper.<String>builder()
+                .data(AccountStatus.ACTIVE.name())
+                .message("Account reactivated successfully")
+                .statusCode(HttpStatus.OK)
+                .build();
+
+    }
+
+    @Override
+    public ResponseWrapper<BankOverviewDto> getOverview() {
+        BankOverviewDto dto = buildOverview();
+
+        return ResponseWrapper.<BankOverviewDto>builder()
+                .data(dto)
+                .message("Fetched bank stat")
                 .statusCode(HttpStatus.OK)
                 .build();
     }
@@ -245,7 +332,21 @@ public class AdminServiceImpl implements AdminService {
                 .address(address)
                 .build();
         Admin savedAdmin = adminRepository.save(admin);
-        return new AdminCreationResponse(savedAdmin.getFirstName());
+        return new AdminCreationResponse(savedAdmin.getFirstName(), adminId);
+    }
+
+    private AdminDto buildAdminDto(Admin admin){
+        return AdminDto.builder()
+                .adminId(admin.getAdminId())
+                .firstName(admin.getFirstName())
+                .lastName(admin.getLastName())
+                .email(admin.getEmail())
+                .phoneNumber(admin.getPhoneNumber())
+                .gender(admin.getGender())
+                .dateOfBirth(admin.getDateOfBirth())
+                .role(admin.getRole())
+                .address(admin.getAddress())
+                .build();
     }
 
     private boolean validatePhoneNumber(String phoneNumber){
@@ -279,22 +380,12 @@ public class AdminServiceImpl implements AdminService {
                 .build();
     }
 
-    private void sendSuspensionMail(String email, String reasonForSuspension){
-
-        EmailDetails emailDetails = EmailDetails.builder()
-                .recipient(email)
-                .subject("Account suspension")
-                .messageBody(reasonForSuspension)
-                .build();
-        emailService.sendEmail(emailDetails);
-    }
-
-    private void sendKycResolutionMail(String email, String emailSubject, String kycResolution){
+    private void sendMail(String email, String emailSubject, String emailBody){
 
         EmailDetails emailDetails = EmailDetails.builder()
                 .recipient(email)
                 .subject(emailSubject)
-                .messageBody(kycResolution)
+                .messageBody(emailBody)
                 .build();
         emailService.sendEmail(emailDetails);
     }
@@ -329,6 +420,29 @@ public class AdminServiceImpl implements AdminService {
             customer.setUpdatedAt(LocalDateTime.now());
         }
         customerRepository.save(customer);
+    }
+
+    private long totalTierAccount(AccountTier tier){
+        return accountRepository.countAccountByAccountTier(tier);
+    }
+
+    private long totalAccountByStatus(AccountStatus status){
+        return accountRepository.countByAccountStatus(status);
+    }
+
+    private BankOverviewDto buildOverview(){
+        long totalAccount = accountRepository.count();
+
+        return BankOverviewDto.builder()
+                .totalAccount(totalAccount)
+                .totalActiveAccount(totalAccountByStatus(AccountStatus.ACTIVE))
+                .totalDormantAccount(totalAccountByStatus(AccountStatus.DORMANT))
+                .totalSuspendedAccount(totalAccountByStatus(AccountStatus.FROZEN))
+                .totalTier1Account(totalTierAccount(AccountTier.TIER_1))
+                .totalTier2Account(totalTierAccount(AccountTier.TIER_2))
+                .totalTier3Account(totalTierAccount(AccountTier.TIER_3))
+                .build();
+
     }
 
 }

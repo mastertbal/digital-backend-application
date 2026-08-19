@@ -25,11 +25,6 @@ public class AccountController {
         return customerService.createPersonalAccount(payload);
     }
 
-    @PostMapping("/create-admin-account")
-    public ResponseWrapper<AccountCreatedResponse> createAdminAccount(@RequestBody @Valid CustomerRegistrationRequest payload){
-        return customerService.createAdminAccount(payload);
-    }
-
     @Operation(security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping(path = "/user-profile")
     public Response<CustomerDto> getUserProfile() {
