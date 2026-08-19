@@ -3,7 +3,9 @@ package com.groupa.digitalbackendapplication.domain.entities;
 import com.groupa.digitalbackendapplication.domain.enums.ActionType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -31,4 +33,8 @@ public class AuditLog {
 
     @Column(name = "entity_type", nullable = false, length = 25)
     private String entityType;
+
+    @Column
+    @CreationTimestamp
+    private LocalDateTime timeOfCreation;
 }

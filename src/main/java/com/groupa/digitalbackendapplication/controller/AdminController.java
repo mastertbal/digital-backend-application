@@ -4,6 +4,7 @@ import com.groupa.digitalbackendapplication.domain.dto.request.AccountSuspension
 import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.KycRejectionRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
+import com.groupa.digitalbackendapplication.domain.entities.AuditLog;
 import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.service.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +16,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -86,5 +89,11 @@ public class AdminController {
     @GetMapping("/stats")
     public ResponseWrapper<BankOverviewDto> getBankStat(){
         return adminService.getOverview();
+    }
+
+    @Operation(security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/get-all-audit-logs")
+    public ResponseWrapper<List<AuditLog>> getAllAuditLogs() {
+        return adminService.getAuditLogs();
     }
 }

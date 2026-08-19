@@ -4,10 +4,12 @@ import com.groupa.digitalbackendapplication.domain.dto.request.AccountSuspension
 import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.KycRejectionRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
+import com.groupa.digitalbackendapplication.domain.entities.AuditLog;
 import com.groupa.digitalbackendapplication.domain.response.Response;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface AdminService {
@@ -23,4 +25,5 @@ public interface AdminService {
     ResponseWrapper<String> suspendAccount(AccountSuspensionRequest payload);
     ResponseWrapper<String> reactivateAccount(UUID accountId);
     ResponseWrapper<BankOverviewDto> getOverview();
+    ResponseWrapper<List<AuditLog>> getAuditLogs();
 }

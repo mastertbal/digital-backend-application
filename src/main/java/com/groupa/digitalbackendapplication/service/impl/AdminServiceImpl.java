@@ -4,20 +4,14 @@ import com.groupa.digitalbackendapplication.domain.dto.request.AccountSuspension
 import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.KycRejectionRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
-import com.groupa.digitalbackendapplication.domain.entities.Account;
-import com.groupa.digitalbackendapplication.domain.entities.Admin;
-import com.groupa.digitalbackendapplication.domain.entities.Customer;
-import com.groupa.digitalbackendapplication.domain.entities.KycEntity;
+import com.groupa.digitalbackendapplication.domain.entities.*;
 import com.groupa.digitalbackendapplication.domain.enums.*;
 import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.notification.EmailDetails;
 import com.groupa.digitalbackendapplication.notification.EmailService;
-import com.groupa.digitalbackendapplication.repository.AccountRepository;
-import com.groupa.digitalbackendapplication.repository.AdminRepository;
-import com.groupa.digitalbackendapplication.repository.CustomerRepository;
-import com.groupa.digitalbackendapplication.repository.KycEntityRepository;
+import com.groupa.digitalbackendapplication.repository.*;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.AdminService;
 import com.groupa.digitalbackendapplication.service.CustomerService;
@@ -58,6 +52,7 @@ public class AdminServiceImpl implements AdminService {
     private final SecurityUtil securityUtil;
     private final CustomerService customerService;
     private final TransactionService transactionService;
+    private final AuditLogRepository auditLogRepository;
 
 
     @Override
@@ -296,6 +291,17 @@ public class AdminServiceImpl implements AdminService {
                 .data(dto)
                 .message("Fetched bank stat")
                 .statusCode(HttpStatus.OK)
+                .build();
+    }
+
+    @Override
+    public ResponseWrapper<List<AuditLog>> getAuditLogs() {
+        List<AuditLog> auditLogs = auditLogRepository.findAll();
+        return ResponseWrapper
+                .<List<AuditLog>>builder()
+                .statusCode(HttpStatus.OK)
+                .data(auditLogs)
+                .message("Success")
                 .build();
     }
 
