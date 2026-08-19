@@ -47,6 +47,10 @@ public class KycServiceImpl implements KycService {
         Account account = accountRepository.findByOwnerId(customer.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
+        Optional<KycEntity> kycEntity = kycEntityRepository.findByAccountIdAndStatus(account.getId(), KycStatus.PENDING);
+        if(kycEntity.isPresent())
+            throw new BadRequestException("Wait until previous kyc is resolved");
+
         Optional<String> validationError = validate(payload.getDocumentType(), payload.getSubmittedValue());
         if (validationError.isPresent()){
             KycSubmissionResponse message = buildKycEntity(customer.getId(),account.getId(),payload.getDocumentType(),
@@ -69,15 +73,12 @@ public class KycServiceImpl implements KycService {
         else throw new BadRequestException("Invalid document to upgrade tier");
 
         KycSubmissionResponse message = buildKycEntity(customer.getId(),account.getId(),payload.getDocumentType(),
-                payload.getSubmittedValue(),KycStatus.APPROVED, null, resultingTier);
-
-        buildAccount(account, resultingTier);
-        buildCustomer(customer, payload.getDocumentType(), payload.getSubmittedValue());
+                payload.getSubmittedValue(),KycStatus.PENDING, null, resultingTier);
 
 
         return ResponseWrapper.<KycSubmissionResponse>builder()
                 .data(message)
-                .message("Tier upgrade successful")
+                .message("KYC successfully submitted, an email will be sent once approved or rejected")
                 .statusCode(HttpStatus.OK)
                 .build();
     }
@@ -116,7 +117,7 @@ public class KycServiceImpl implements KycService {
                 .rejectionReason(rejectionReason)
                 .resultingTier(resultingTier)
                 .submittedAt(LocalDateTime.now())
-                .resolvedAt(LocalDateTime.now())
+                .resolvedAt(null)
                 .build();
         kycEntityRepository.save(save);
 

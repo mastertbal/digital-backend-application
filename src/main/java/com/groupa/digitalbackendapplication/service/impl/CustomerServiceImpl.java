@@ -1,5 +1,6 @@
 package com.groupa.digitalbackendapplication.service.impl;
 
+import com.groupa.digitalbackendapplication.domain.dto.request.ChangePasswordRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.CustomerRegistrationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
 import com.groupa.digitalbackendapplication.domain.entities.Account;
@@ -10,6 +11,7 @@ import com.groupa.digitalbackendapplication.domain.enums.Gender;
 import com.groupa.digitalbackendapplication.domain.enums.Role;
 import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
+import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.notification.EmailDetails;
 import com.groupa.digitalbackendapplication.notification.EmailService;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
@@ -30,6 +32,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,8 +58,6 @@ public class CustomerServiceImpl implements CustomerService {
         Role userRole = Role.CUSTOMER;
         AccountStatus accountStatus = AccountStatus.ACTIVE;
         AccountTier accountTier = AccountTier.TIER_1;
-
-        if(validateAge(payload.getDateOfBirth())) throw new BadRequestException("User must be at least 18 years old");
 
         if(validatePhoneNumber(payload.getPhoneNumber())) throw new BadRequestException("Error occurred: please provide another phone number");
 
@@ -123,18 +124,26 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public Response<CustomerDto> getUserProfile() {
         AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
-
+        loginSessionUtil.verify(loggedInUser.getCustomer().getId());
         return getUserProfileById(loggedInUser.getCustomer().getId());
     }
 
     @Override
     public Response<CustomerDto> getUserProfileById(UUID userId) {
 
-        Optional<Customer> customerOptional = customerRepository.findById(userId);
+        Customer customer = customerRepository.findById(userId)
+                .orElseThrow(()-> new ResourceNotFoundException("User not found"));
 
-        Customer customer = customerOptional.get();
+        Account account = accountRepository.findByOwnerId(customer.getId())
+                .orElseThrow(()-> new ResourceNotFoundException("Account not found"));
 
-        loginSessionUtil.verify(customer.getId());
+        AccountDto accountDto = AccountDto.builder()
+                .id(account.getId())
+                .accountNumber(account.getAccountNumber())
+                .balance(account.getBalance())
+                .accountTier(account.getAccountTier())
+                .accountStatus(account.getAccountStatus())
+                .build();
 
         CustomerDto customerDto = CustomerDto.builder()
                 .id(customer.getId())
@@ -148,12 +157,33 @@ public class CustomerServiceImpl implements CustomerService {
                 .address(customer.getAddress())
                 .nin(encryptionUtil.decrypt(customer.getNin()))
                 .bvn(encryptionUtil.decrypt(customer.getBvn()))
+                .accountDto(accountDto)
                 .build();
 
         return Response.<CustomerDto>builder()
                 .data(customerDto)
                 .message("Success")
                 .statusCode(HttpStatus.OK.value())
+                .build();
+    }
+
+    @Override
+    public ResponseWrapper<String> changePassword(ChangePasswordRequest payload) {
+        AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
+
+        Customer customer  = customerRepository.findById(loggedInUser.getCustomer().getId())
+                .orElseThrow(()-> new ResourceNotFoundException("User not found"));
+
+        if(!payload.newPassword().equals(payload.confirmPassword()))
+            throw new BadRequestException("Confirm password must be same as new password");
+
+        customer.setPassword(passwordEncoder.encode(payload.confirmPassword()));
+        customer.setUpdatedAt(LocalDateTime.now());
+        customerRepository.save(customer);
+
+        return ResponseWrapper.<String>builder()
+                .message("Password reset successful")
+                .statusCode(HttpStatus.ACCEPTED)
                 .build();
     }
 

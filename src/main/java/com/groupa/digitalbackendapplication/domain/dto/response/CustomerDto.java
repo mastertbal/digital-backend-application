@@ -37,4 +37,6 @@ public class CustomerDto {
     private String nin;
 
     private String bvn;
+
+    private AccountDto accountDto;
 }
