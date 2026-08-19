@@ -22,4 +22,5 @@ public interface AdminService {
     ResponseWrapper<KycResolveResponse> rejectKyc(KycRejectionRequest payload);
     ResponseWrapper<String> suspendAccount(AccountSuspensionRequest payload);
     ResponseWrapper<String> reactivateAccount(UUID accountId);
+    ResponseWrapper<BankOverviewDto> getOverview();
 }

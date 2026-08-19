@@ -288,6 +288,17 @@ public class AdminServiceImpl implements AdminService {
 
     }
 
+    @Override
+    public ResponseWrapper<BankOverviewDto> getOverview() {
+        BankOverviewDto dto = buildOverview();
+
+        return ResponseWrapper.<BankOverviewDto>builder()
+                .data(dto)
+                .message("Fetched bank stat")
+                .statusCode(HttpStatus.OK)
+                .build();
+    }
+
 
     private String buildAdminId(){
         String id = "AD0001";
@@ -409,6 +420,29 @@ public class AdminServiceImpl implements AdminService {
             customer.setUpdatedAt(LocalDateTime.now());
         }
         customerRepository.save(customer);
+    }
+
+    private long totalTierAccount(AccountTier tier){
+        return accountRepository.countAccountByAccountTier(tier);
+    }
+
+    private long totalAccountByStatus(AccountStatus status){
+        return accountRepository.countByAccountStatus(status);
+    }
+
+    private BankOverviewDto buildOverview(){
+        long totalAccount = accountRepository.count();
+
+        return BankOverviewDto.builder()
+                .totalAccount(totalAccount)
+                .totalActiveAccount(totalAccountByStatus(AccountStatus.ACTIVE))
+                .totalDormantAccount(totalAccountByStatus(AccountStatus.DORMANT))
+                .totalSuspendedAccount(totalAccountByStatus(AccountStatus.FROZEN))
+                .totalTier1Account(totalTierAccount(AccountTier.TIER_1))
+                .totalTier2Account(totalTierAccount(AccountTier.TIER_2))
+                .totalTier3Account(totalTierAccount(AccountTier.TIER_3))
+                .build();
+
     }
 
 }
