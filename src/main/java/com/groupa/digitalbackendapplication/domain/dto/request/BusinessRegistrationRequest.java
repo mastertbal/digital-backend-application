@@ -25,7 +25,7 @@ public class BusinessRegistrationRequest {
     private String cacNumber;
 
     @NotBlank(message = "Password cannot be null or empty")
-    @Pattern(regexp = "^(?=.*\\d).{11,16}$", message = "Password should contain at least one number, one letter and must be 11 to 16 characters")
+    @Pattern(regexp = "^(?=.*\\d)(?=.*[A-Z]).{10,15}$", message = "Password should contain at least one number, one letter and must be 10 to 15 characters long")
     private String password;
 
     @NotBlank(message = "Business email cannot be null or empty")
