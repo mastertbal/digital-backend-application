@@ -11,6 +11,7 @@ import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.CardDetailsRepository;
+import com.groupa.digitalbackendapplication.repository.DailyTransactionsRepository;
 import com.groupa.digitalbackendapplication.repository.TransactionRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.DepositService;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +42,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
     private final CardDetailsRepository cardDetailsRepository;
     private final AccountRepository accountRepository;
+    private final DailyTransactionsRepository dailyTransactionsRepository;
     private final DepositService depositService;
     private final TierLimiterUtil tierLimiterUtil;
     private final SecurityUtil securityUtil;
@@ -49,9 +52,16 @@ public class TransactionServiceImpl implements TransactionService {
     public ResponseWrapper<TransactionStatusResponse> transferFunds(@Valid TransferFundsRequest payload) {
         Account sourceAccount = getAuthenticatedUser();
 
+        if(!isAccountActive(sourceAccount.getAccountNumber()))
+            throw new BadRequestException("Your account is " + sourceAccount.getAccountStatus().name() + ". contact bank to rectify");
+
         //Does destination Account exists
         Account destinationAccount = accountRepository.findByAccountNumber(payload.destinationAccount().trim())
                 .orElseThrow(() -> new ResourceNotFoundException("Account number does not exist"));
+
+        if(!isAccountActive(destinationAccount.getAccountNumber()))
+            throw new BadRequestException("Can not transfer to this account");
+
 
         //Check if account balance isn't above tier maximum balance
         tierLimiterUtil.validateNotAlreadyOverTierMaxBalance(sourceAccount);
@@ -59,7 +69,7 @@ public class TransactionServiceImpl implements TransactionService {
         tierLimiterUtil.validateDailyTransferLimit(sourceAccount, payload.amount());
 
         if (payload.amount().compareTo(sourceAccount.getBalance()) > 0)
-            throw new BadRequestException("Insufficient funds available in account");
+            throw new BadRequestException("Insufficient funds in account");
 
         Transaction senderTransaction = TransactionUtil.buildTransactionEntity(TransactionType.TRANSFER, TransactionStatus.SUCCESSFUL, sourceAccount,
                 destinationAccount, payload.amount(), payload.description().trim());
@@ -99,6 +109,13 @@ public class TransactionServiceImpl implements TransactionService {
         senderTransaction = transactionRepository.save(senderTransaction);
         transactionRepository.save(receiverTransaction);
 
+        //Update daily transactions table
+        DailyTransactions dailyTransactions = fetchDailyTransactionEntity();
+        dailyTransactions.setTotalCredit(dailyTransactions.getTotalCredit().add(payload.amount()));
+        dailyTransactions.setTotalDebit(dailyTransactions.getTotalDebit().add(payload.amount()));
+
+        dailyTransactionsRepository.save(dailyTransactions);
+
         return ResponseWrapper.<TransactionStatusResponse>builder()
                 .data(buildTransactionResponse(senderTransaction.getTransactionStatus()))
                 .message("Transaction successful")
@@ -110,6 +127,9 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional
     public ResponseWrapper<TransactionStatusResponse> depositFunds(@Valid CardDetailsRequest payload) {
         Account destinationAccount = getAuthenticatedUser();
+
+        if(!isAccountActive(destinationAccount.getAccountNumber()))
+            throw new BadRequestException("Your account is " + destinationAccount.getAccountStatus().name() + ". contact bank to rectify");
 
         if (payload.depositAmount().compareTo(BigDecimal.valueOf(100)) < 0)
             throw new BadRequestException("Deposit amount cannot be less than 100");
@@ -128,6 +148,10 @@ public class TransactionServiceImpl implements TransactionService {
         if (cardDetails.transactionStatus() == TransactionStatus.SUCCESSFUL) {
             Transaction savedTransaction = depositService.buildSuccessfulDeposit(destinationAccount, payload);
 
+            //Update daily transactions table
+            DailyTransactions dailyTransactions = fetchDailyTransactionEntity();
+            dailyTransactions.setTotalCredit(dailyTransactions.getTotalCredit().add(payload.depositAmount()));
+            dailyTransactionsRepository.save(dailyTransactions);
             return ResponseWrapper.<TransactionStatusResponse>builder()
                     .data(buildTransactionResponse(savedTransaction.getTransactionStatus()))
                     .message("Deposit Successful")
@@ -147,6 +171,11 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public ResponseWrapper<TransactionStatusResponse> requeryTransaction(UUID id) {
+        Account loggedInAccount = getAuthenticatedUser();
+
+        if(!isAccountActive(loggedInAccount.getAccountNumber()))
+            throw new BadRequestException("Your account is " + loggedInAccount.getAccountStatus().name() + ". contact bank to rectify");
+
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction does not exist"));
 
@@ -162,6 +191,10 @@ public class TransactionServiceImpl implements TransactionService {
         if (updatedTransactionStatus == TransactionStatus.SUCCESSFUL) {
             Account account = transaction.getDestinationAccount();
             account.setBalance(account.getBalance().add(transaction.getAmountTransferred()));
+            //Update daily transactions table
+            DailyTransactions dailyTransactions = fetchDailyTransactionEntity();
+            dailyTransactions.setTotalCredit(dailyTransactions.getTotalCredit().add(transaction.getAmountTransferred()));
+            dailyTransactionsRepository.save(dailyTransactions);
         }
 
         List<LedgerEntry> existingLedgerEntries = new ArrayList<>(transaction.getLedgerEntries());
@@ -195,6 +228,9 @@ public class TransactionServiceImpl implements TransactionService {
     public ResponseWrapper<List<TransactionHistoryResponseDto>> getAllTransactionHistory() {
         Account account = getAuthenticatedUser();
 
+        if(!isAccountActive(account.getAccountNumber()))
+            throw new BadRequestException("Your account is " + account.getAccountStatus().name() + ". contact bank to rectify");
+
         List<TransactionHistoryResponseDto> transactions = transactionRepository.findAllByDestinationAccount(account)
                 .stream().map(tran -> new TransactionHistoryResponseDto(tran.getId(),
                         tran.getTransactionType(), tran.getTransactionStatus(), tran.getSourceAccount() != null ? tran.getSourceAccount().getAccountNumber() : null,
@@ -210,15 +246,49 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
     }
 
+    @Override
+    public ResponseWrapper<TransactionHistoryResponseDto> getTransactionById(UUID transactionId){
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(()-> new ResourceNotFoundException("Transaction not found"));
+
+        String sourceAccount = "";
+        if(transaction.getSourceAccount() != null)
+            sourceAccount = transaction.getSourceAccount().getAccountNumber();
+        else
+            sourceAccount = null;
+
+        TransactionHistoryResponseDto dto =  new TransactionHistoryResponseDto(transaction.getId(),
+                transaction.getTransactionType(), transaction.getTransactionStatus(),sourceAccount,
+                transaction.getAmountTransferred(), transaction.getDescription(), transaction.getCreatedAt());
+
+        return ResponseWrapper.<TransactionHistoryResponseDto>builder()
+                .data(dto)
+                .message("Fetched Transaction successfully")
+                .statusCode(HttpStatus.OK)
+                .build();
+    }
+
     private TransactionStatusResponse buildTransactionResponse(TransactionStatus transactionStatus) {
         return new TransactionStatusResponse(transactionStatus);
     }
 
+    private DailyTransactions fetchDailyTransactionEntity(){
+        return dailyTransactionsRepository.getDailyTransactionsByDate(LocalDate.now())
+                .orElse(new DailyTransactions(BigDecimal.valueOf(0), BigDecimal.valueOf(0)));
+    }
+
     private Account getAuthenticatedUser() {
         AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
-        Customer customer = loggedInUser.getCustomer();
+        User user = loggedInUser.getUser();
 
-        return accountRepository.findByOwnerId(customer.getId())
+        return accountRepository.findByOwnerId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+    }
+
+    private boolean isAccountActive(String accountNumber){
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(()-> new ResourceNotFoundException("Account not found"));
+
+        return account.getAccountStatus() == AccountStatus.ACTIVE;
     }
 }

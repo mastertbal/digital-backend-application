@@ -1,5 +1,17 @@
 package com.groupa.digitalbackendapplication.domain.enums;
 
 public enum ActionType {
-
+    USER_REGISTRATION,
+    USER_LOGIN,
+    ACCOUNT_CREATED,
+    ACCOUNT_SUSPENDED,
+    ACCOUNT_UNSUSPENDED,
+    KYC_SUBMITTED,
+    KYC_APPROVED,
+    KYC_REJECTED,
+    TIER_UPGRADED,
+    TRANSACTION_INITIATED,
+    TRANSACTION_SUCCESS,
+    TRANSACTION_FAILED,
+    TRANSACTION_REVERSED,
 }

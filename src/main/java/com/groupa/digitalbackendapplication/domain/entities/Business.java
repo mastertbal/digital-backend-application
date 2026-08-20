@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "business")
+@Table(name = "businesses")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -21,25 +21,25 @@ public class Business {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "business_name", unique = true)
+    @Column(name = "business_name", unique = true, nullable = false, length = 100)
     private String businessName;
 
-    @Column(name = "business_address", unique = true)
+    @Column(name = "business_address", unique = true, nullable = false, length = 100)
     private String businessAddress;
 
-    @Column(name = "cac_number", unique = true)
+    @Column(name = "cac_number", unique = true, nullable = false, length = 50)
     private String cacNumber;
 
-    @Column(name = "password")
+    @Column(name = "password", nullable = false, length = 65)
     private String password;
 
-    @Column(name = "business_email", unique = true)
+    @Column(name = "business_email", unique = true, nullable = false, length = 50)
     private String businessEmail;
 
-    @Column(name = "account_number", unique = true)
+    @Column(name = "account_number", unique = true, nullable = false, length = 25)
     private String accountNumber;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

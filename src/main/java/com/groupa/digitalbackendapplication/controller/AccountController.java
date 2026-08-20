@@ -1,5 +1,6 @@
 package com.groupa.digitalbackendapplication.controller;
 
+import com.groupa.digitalbackendapplication.domain.dto.request.ChangePasswordRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.CustomerRegistrationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.AccountCreatedResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.CustomerDto;
@@ -25,14 +26,14 @@ public class AccountController {
     }
 
     @Operation(security = @SecurityRequirement(name = "bearerAuth"))
-    @PostMapping("/create-admin-account")
-    public ResponseWrapper<AccountCreatedResponse> createAdminAccount(@RequestBody @Valid CustomerRegistrationRequest payload){
-        return customerService.createAdminAccount(payload);
-    }
-
-    @Operation(security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping(path = "/user-profile")
     public Response<CustomerDto> getUserProfile() {
         return customerService.getUserProfile();
+    }
+
+    @Operation(security = @SecurityRequirement(name = "bearerAuth"))
+    @PatchMapping("/password-reset")
+    public ResponseWrapper<String> changePassword(@Valid ChangePasswordRequest payload){
+        return customerService.changePassword(payload);
     }
 }
