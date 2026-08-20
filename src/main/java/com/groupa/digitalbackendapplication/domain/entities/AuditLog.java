@@ -24,14 +24,14 @@ public class AuditLog {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column(name = "user_email", nullable = false, length = 100)
+    @Column(name = "user_email", nullable = false)
     private String userEmail;
 
-    @Column(name = "action_type", nullable = false, length = 25)
+    @Column(name = "action_type", nullable = false, length = 100)
     @Enumerated(EnumType.STRING)
     private ActionType actionType;
 
-    @Column(name = "entity_type", nullable = false, length = 25)
+    @Column(name = "entity_type", nullable = false)
     private String entityType;
 
     @Column

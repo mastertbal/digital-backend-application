@@ -64,8 +64,6 @@ public class TokenService {
     }
 
     public boolean validateRefreshToken(String token) {
-        System.out.println(extractAllClaims(token).get("refresh") != null);
-        System.out.println(isTokenExpired(token));
         if ( extractAllClaims(token).get("refresh") != null && !isTokenExpired(token) ) {
             return true;
         }
