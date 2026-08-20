@@ -1,13 +1,16 @@
 package com.groupa.digitalbackendapplication.service.impl;
 
 import com.groupa.digitalbackendapplication.domain.dto.response.CustomerDto;
+import com.groupa.digitalbackendapplication.domain.entities.Account;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
+import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
 import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
 import com.groupa.digitalbackendapplication.domain.response.LogoutResponse;
 import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
+import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.security.CustomUserDetailsService;
@@ -37,6 +40,7 @@ import java.util.UUID;
 public class AuthServiceImpl implements AuthService {
 
     private final CustomerRepository customerRepository;
+    private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
     private final CustomUserDetailsService customUserDetailsService;
@@ -49,6 +53,15 @@ public class AuthServiceImpl implements AuthService {
         String password = loginRequest.getPassword();
 
         AuthUser authUser = (AuthUser) customUserDetailsService.loadUserByUsername(email);
+
+        Account account = accountRepository.findByOwnerId(
+                authUser.getCustomer().getId()
+        ).orElseThrow(()-> new ResourceNotFoundException("Account not found."));
+
+        if (account.getAccountStatus()== AccountStatus.PENDING_VERIFICATION){
+            throw new BadRequestException("Account has not been verified. Please verify your OTP sent to you.");
+
+        }
 
         if (!passwordEncoder.matches(password, authUser.getPassword())) {
             throw new BadRequestException("Password does not match");
