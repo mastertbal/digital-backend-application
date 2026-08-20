@@ -19,6 +19,7 @@ import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.CustomerService;
 import com.groupa.digitalbackendapplication.service.LoginSessionService;
+import com.groupa.digitalbackendapplication.service.OtpService;
 import com.groupa.digitalbackendapplication.utils.AccountUtil;
 import com.groupa.digitalbackendapplication.utils.LoginSessionUtil;
 import com.groupa.digitalbackendapplication.utils.EncryptionUtil;
@@ -53,11 +54,12 @@ public class CustomerServiceImpl implements CustomerService {
     private final EncryptionUtil encryptionUtil;
     private final EmailService emailService;
     private final AuditLogRepository auditLogRepository;
+    private final OtpService otpService;
 
     @Override
     public ResponseWrapper<AccountCreatedResponse> createPersonalAccount(CustomerRegistrationRequest payload) {
         Role userRole = Role.CUSTOMER;
-        AccountStatus accountStatus = AccountStatus.ACTIVE;
+        AccountStatus accountStatus = AccountStatus.PENDING_VERIFICATION;
         AccountTier accountTier = AccountTier.TIER_1;
 
         if(validatePhoneNumber(payload.getPhoneNumber())) throw new BadRequestException("Error occurred: please provide another phone number");
@@ -71,19 +73,12 @@ public class CustomerServiceImpl implements CustomerService {
                 payload.getPhoneNumber(), userRole, payload.getGender(), payload.getDateOfBirth(), payload.getAddress());
 
         String accountNumber = accountUtil.generateAccountNumber();
-        //Continue account creation
-        AccountCreatedResponse createAccount = buildAccount(userResponse.getCustomerId(), accountStatus, accountNumber, accountTier);
 
-        try {
-            sendWelcomeEmail(payload.getFirstName(), payload.getEmail());
-        } catch (Exception e){
-            log.error("Customer welcome email failed to send to {}: {}", payload.getEmail(), e.getMessage());
-        }
-        try {
-            sendAccountCreationEmail(payload.getFirstName(), payload.getEmail(), createAccount.getAccountNumber(), accountTier);
-        } catch (Exception e){
-            log.error("Welcome email could not be sent to {}: {}", payload.getEmail(), e.getMessage());
-        }
+        //Continue account creation
+
+        Account account = buildAccount(userResponse.getCustomerId(), accountStatus, accountNumber, accountTier);
+        AccountCreatedResponse createAccount = new AccountCreatedResponse(account.getAccountNumber());
+        otpService.generateAndSendOtp(userResponse.getCustomerId(), account);
 
         // save audit log entry
         auditLogRepository.save(
@@ -106,7 +101,8 @@ public class CustomerServiceImpl implements CustomerService {
 
         return ResponseWrapper.<AccountCreatedResponse>builder()
                 .data(createAccount)
-                .message("Account Creation Successful")
+                .message("Account created successful." +
+                        "Please verify your account with the OTP sent to you.")
                 .statusCode(HttpStatus.CREATED)
                 .build();
     }
@@ -230,7 +226,7 @@ public class CustomerServiceImpl implements CustomerService {
         return new SavedCustomerResponse(savedCustomer.getId());
     }
 
-    private AccountCreatedResponse buildAccount(UUID ownerId, AccountStatus accountStatus, String accountNumber, AccountTier accountTier){
+    private Account buildAccount(UUID ownerId, AccountStatus accountStatus, String accountNumber, AccountTier accountTier){
         Account account = Account.builder()
                 .ownerId(ownerId)
                 .accountStatus(accountStatus)
@@ -238,22 +234,7 @@ public class CustomerServiceImpl implements CustomerService {
                 .accountTier(accountTier)
                 .balance(BigDecimal.ZERO)
                 .build();
-        accountRepository.save(account);
-        return new AccountCreatedResponse(account.getAccountNumber());
-    }
-
-    private void sendWelcomeEmail(String firstname, String email){
-        String welcomeMessage = "Welcome, " + firstname + "!\n\n" +
-                "We are excited to have you on board at PAYEDGE DIGITAL BANKING. \n\n" +
-                "Start enjoying seamless deposits, withdrawals, transfers and monthly statements. \n\n" +
-                "Your financial journey starts here!";
-
-        EmailDetails emailDetails = EmailDetails.builder()
-                .recipient(email)
-                .subject("Welcome to PayEdge Digital Banking")
-                .messageBody(welcomeMessage)
-                .build();
-        emailService.sendEmail(emailDetails);
+        return accountRepository.save(account);
     }
 
     private void sendAccountCreationEmail(String firstname, String email, String accountNumber, AccountTier accountTier){
