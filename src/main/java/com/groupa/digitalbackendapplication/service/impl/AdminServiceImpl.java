@@ -33,10 +33,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -122,6 +119,21 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(()-> new ResourceNotFoundException("Account not found"));
 
         return customerService.getUserProfileById(account.getOwnerId());
+    }
+
+    @Override
+    public ResponseWrapper<Page<CustomerDto>> getAllCustomer(Pageable pageable) {
+        Page<Account> accountPage = accountRepository.findAll(pageable);
+
+        List<CustomerDto> dtos = buildPageCustomer(accountPage);
+
+        Page<CustomerDto> pageCustomer = new PageImpl<>(dtos, pageable, accountPage.getTotalElements());
+
+        return ResponseWrapper.<Page<CustomerDto>>builder()
+                .data(pageCustomer)
+                .message("successful")
+                .statusCode(HttpStatus.OK)
+                .build();
     }
 
     @Override
@@ -563,6 +575,43 @@ public class AdminServiceImpl implements AdminService {
                 .totalTier3Account(totalTierAccount(AccountTier.TIER_3))
                 .build();
 
+    }
+
+    private List<CustomerDto> buildPageCustomer(Page<Account> accountPage){
+
+        List<Account> accounts = accountPage.getContent();
+
+        List<CustomerDto> dtos = new ArrayList<>();
+
+        for (Account account : accounts) {
+            Customer customer = customerRepository.findById(account.getOwnerId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+
+            AccountDto accountDto = AccountDto.builder()
+                    .id(account.getId())
+                    .accountNumber(account.getAccountNumber())
+                    .balance(account.getBalance())
+                    .accountTier(account.getAccountTier())
+                    .accountStatus(account.getAccountStatus())
+                    .build();
+
+            CustomerDto customerDto = CustomerDto.builder()
+                    .id(customer.getId())
+                    .firstName(customer.getFirstName())
+                    .lastName(customer.getLastName())
+                    .email(customer.getEmail())
+                    .phoneNumber(customer.getPhoneNumber())
+                    .gender(customer.getGender())
+                    .dateOfBirth(customer.getDateOfBirth())
+                    .role(customer.getRole())
+                    .address(customer.getAddress())
+                    .nin(encryptionUtil.decrypt(customer.getNin()))
+                    .bvn(encryptionUtil.decrypt(customer.getBvn()))
+                    .accountDto(accountDto)
+                    .build();
+            dtos.add(customerDto);
+        }
+        return dtos;
     }
 
 }

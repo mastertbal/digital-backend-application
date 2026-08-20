@@ -81,6 +81,15 @@ public class AdminController {
     }
 
     @Operation(security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/customers")
+    public ResponseWrapper<Page<CustomerDto>> getAllCustomer(
+            @RequestParam(defaultValue = "0")  int     page,
+            @RequestParam(defaultValue = "10") int     size){
+        Pageable pageable = PageRequest.of(page, size);
+        return adminService.getAllCustomer(pageable);
+    }
+
+    @Operation(security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/transaction/{transaction-id}")
     public ResponseWrapper<TransactionHistoryResponseDto> getTransactionById(@PathVariable("transaction-id") UUID id){
         return adminService.getTransactionById(id);
