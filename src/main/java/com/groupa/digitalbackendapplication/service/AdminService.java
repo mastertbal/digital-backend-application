@@ -16,7 +16,7 @@ public interface AdminService {
 
     ResponseWrapper<AdminCreationResponse> createAdmin(AdminCreationRequest payload);
     ResponseWrapper<AdminDto> getAdminProfile();
-    Response<CustomerDto> getCustomerProfile(UUID customerId);
+    Response<CustomerDto> getCustomerProfile(String accountNumber);
     ResponseWrapper<TransactionHistoryResponseDto> getTransactionById(UUID transactionId);
     ResponseWrapper<Page<KycDto>> fetchAllPendingKyc(Pageable pageable);
     ResponseWrapper<KycDto> fetchPendingKycById(UUID id);

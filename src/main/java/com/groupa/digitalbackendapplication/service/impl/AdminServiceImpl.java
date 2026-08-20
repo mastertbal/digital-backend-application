@@ -117,8 +117,11 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public Response<CustomerDto> getCustomerProfile(UUID customerId) {
-        return customerService.getUserProfileById(customerId);
+    public Response<CustomerDto> getCustomerProfile(String accountNumber) {
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(()-> new ResourceNotFoundException("Account not found"));
+
+        return customerService.getUserProfileById(account.getOwnerId());
     }
 
     @Override

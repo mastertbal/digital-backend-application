@@ -75,9 +75,9 @@ public class AdminController {
     }
 
     @Operation(security = @SecurityRequirement(name = "bearerAuth"))
-    @GetMapping("/customer-profile/{customer-id}")
-    public Response<CustomerDto> getCustomerProfileById(@PathVariable("customer-id") UUID id){
-        return adminService.getCustomerProfile(id);
+    @GetMapping("/customer-profile/{account-number}")
+    public Response<CustomerDto> getCustomerProfileById(@PathVariable("account-number") String accountNumber){
+        return adminService.getCustomerProfile(accountNumber);
     }
 
     @Operation(security = @SecurityRequirement(name = "bearerAuth"))
