@@ -1,10 +1,12 @@
 package com.groupa.digitalbackendapplication.service.impl;
 
 import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
+import com.groupa.digitalbackendapplication.domain.dto.request.ForgetPasswordRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.AdminCreationResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
 import com.groupa.digitalbackendapplication.domain.entities.Admin;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
+import com.groupa.digitalbackendapplication.domain.entities.User;
 import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
 import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
 import com.groupa.digitalbackendapplication.domain.response.LogoutResponse;
@@ -211,6 +213,42 @@ public class AuthServiceImpl implements AuthService {
                 .message("Success")
                 .data(logoutResponse)
                 .statusCode(HttpStatus.OK.value())
+                .build();
+    }
+
+    @Override
+    public ResponseWrapper<String> forgetCustomerPassword(ForgetPasswordRequest payload) {
+        Customer customer = customerRepository.findByEmail(payload.email())
+                .orElseThrow(()-> new ResourceNotFoundException("user not found"));
+
+        if(!payload.newPassword().equals(payload.confirmPassword()))
+            throw new BadRequestException("Confirm password must be same as new password");
+
+        customer.setPassword(passwordEncoder.encode(payload.confirmPassword()));
+        customer.setUpdatedAt(LocalDateTime.now());
+        customerRepository.save(customer);
+
+        return ResponseWrapper.<String>builder()
+                .message("Password reset successful")
+                .statusCode(HttpStatus.ACCEPTED)
+                .build();
+    }
+
+    @Override
+    public ResponseWrapper<String> forgetAdminPassword(ForgetPasswordRequest payload, String adminId) {
+        Admin admin = adminRepository.findByAdminIdAndEmail(adminId, payload.email())
+                .orElseThrow(()-> new ResourceNotFoundException("Admin not found"));
+
+        if(!payload.newPassword().equals(payload.confirmPassword()))
+            throw new BadRequestException("Confirm password must be same as new password");
+
+        admin.setPassword(passwordEncoder.encode(payload.confirmPassword()));
+        admin.setUpdatedAt(LocalDateTime.now());
+        adminRepository.save(admin);
+
+        return ResponseWrapper.<String>builder()
+                .message("Password reset successful")
+                .statusCode(HttpStatus.ACCEPTED)
                 .build();
     }
 }

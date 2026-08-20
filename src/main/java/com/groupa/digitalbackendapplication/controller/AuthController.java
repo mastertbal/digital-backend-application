@@ -1,6 +1,7 @@
 package com.groupa.digitalbackendapplication.controller;
 
 import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
+import com.groupa.digitalbackendapplication.domain.dto.request.ForgetPasswordRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.AdminCreationResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
 import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
@@ -51,5 +52,15 @@ public class AuthController {
     @PostMapping("/new-access-token")
     public ResponseEntity<Response<LoginResponse>> getNewAccessToken(HttpServletRequest request, HttpServletResponse response){
         return ResponseEntity.ok( authService.getNewAccessToken(request, response) );
+    }
+
+    @PatchMapping("/forget-password/customer")
+    public ResponseWrapper<String> forgetCustomerPassword(@Valid @RequestBody ForgetPasswordRequest payload){
+        return authService.forgetCustomerPassword(payload);
+    }
+
+    @PatchMapping("/forget-password/admin/{admin-id}")
+    public ResponseWrapper<String> forgetAdminPassword(@Valid @RequestBody ForgetPasswordRequest payload, @PathVariable("admin-id") String adminId){
+        return authService.forgetAdminPassword(payload, adminId);
     }
 }
