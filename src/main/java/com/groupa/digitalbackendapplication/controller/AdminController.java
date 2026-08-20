@@ -93,7 +93,10 @@ public class AdminController {
 
     @Operation(security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/get-all-audit-logs")
-    public ResponseWrapper<List<AuditLog>> getAllAuditLogs() {
-        return adminService.getAuditLogs();
+    public ResponseWrapper<Page<AuditLog>> getAllAuditLogs(
+            @RequestParam(required = false, defaultValue = "1") int pageNumber,
+            @RequestParam(required = false, defaultValue = "20") int pageSize
+    ) {
+        return adminService.getAuditLogs(pageNumber, pageSize);
     }
 }

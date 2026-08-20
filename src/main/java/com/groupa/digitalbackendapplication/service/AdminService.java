@@ -25,5 +25,5 @@ public interface AdminService {
     ResponseWrapper<String> suspendAccount(AccountSuspensionRequest payload);
     ResponseWrapper<String> reactivateAccount(UUID accountId);
     ResponseWrapper<BankOverviewDto> getOverview();
-    ResponseWrapper<List<AuditLog>> getAuditLogs();
+    ResponseWrapper<Page<AuditLog>> getAuditLogs(int pageNumber, int pageSize);
 }

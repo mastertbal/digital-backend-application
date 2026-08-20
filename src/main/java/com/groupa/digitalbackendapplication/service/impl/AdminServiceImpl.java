@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -295,13 +296,15 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public ResponseWrapper<List<AuditLog>> getAuditLogs() {
-        List<AuditLog> auditLogs = auditLogRepository.findAll();
-        return ResponseWrapper
-                .<List<AuditLog>>builder()
-                .statusCode(HttpStatus.OK)
+    public ResponseWrapper<Page<AuditLog>> getAuditLogs(int pageNumber, int pageSize) {
+        Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
+
+        Page<AuditLog> auditLogs = auditLogRepository.findAll(pageable);
+
+        return ResponseWrapper.<Page<AuditLog>>builder()
                 .data(auditLogs)
                 .message("Success")
+                .statusCode(HttpStatus.OK)
                 .build();
     }
 
