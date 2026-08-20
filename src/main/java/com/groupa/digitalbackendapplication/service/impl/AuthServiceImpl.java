@@ -1,11 +1,14 @@
 package com.groupa.digitalbackendapplication.service.impl;
 
+import com.groupa.digitalbackendapplication.domain.dto.response.CustomerDto;
+import com.groupa.digitalbackendapplication.domain.entities.Account;
 import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.ForgetPasswordRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.AdminCreationResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
 import com.groupa.digitalbackendapplication.domain.entities.Admin;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
+import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.entities.User;
 import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
 import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
@@ -13,6 +16,7 @@ import com.groupa.digitalbackendapplication.domain.response.LogoutResponse;
 import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
+import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.AdminRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.repository.UserRepository;

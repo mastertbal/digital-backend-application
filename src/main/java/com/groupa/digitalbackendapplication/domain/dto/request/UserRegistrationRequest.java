@@ -28,6 +28,6 @@ public class UserRegistrationRequest {
     private String password;
 
     @NotBlank(message = "Phone number cannot be null or empty")
-    @Pattern(regexp = "0[7|8|9][0|1][0-9]{8}", message = "Invalid phone number format")
+    @Pattern(regexp = "0[789][01][0-9]{8}", message = "Invalid phone number format")
     private String phoneNumber;
 }
