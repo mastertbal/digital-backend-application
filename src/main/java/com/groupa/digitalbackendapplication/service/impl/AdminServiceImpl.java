@@ -25,6 +25,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -97,6 +98,16 @@ public class AdminServiceImpl implements AdminService {
 
         AdminDto dto = buildAdminDto(admin);
 
+        // save audit log
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.USER_PROFILE_FETCHED)
+                        .userId(admin.getId())
+                        .userEmail(admin.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("admin")
+                        .build());
+
         return ResponseWrapper.<AdminDto>builder()
                 .data(dto)
                 .message("Fetch admin profile successfully")
@@ -111,6 +122,16 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public ResponseWrapper<TransactionHistoryResponseDto> getTransactionById(UUID transactionId) {
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.TRANSACTION_FETCHED)
+                        .userId(user.getId())
+                        .userEmail(user.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("transactions")
+                        .build());
         return transactionService.getTransactionById(transactionId);
     }
 
@@ -133,6 +154,17 @@ public class AdminServiceImpl implements AdminService {
 
         Page<KycDto> pagedKyc = new PageImpl<>(dtos, pageable,kycEntityPage.getTotalElements());
 
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.PENDING_KYC_FETCHED)
+                        .userId(user.getId())
+                        .userEmail(user.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("kyc_entities")
+                        .build());
+
         return ResponseWrapper.<Page<KycDto>>builder()
                 .data(pagedKyc)
                 .message("successful")
@@ -147,6 +179,18 @@ public class AdminServiceImpl implements AdminService {
 
         KycDto dto = buildKycDto(kyc.getAccountId(), kyc.getCustomerId(), kyc.getId(), kyc.getDocumentType(),
                 kyc.getSubmittedValue(), kyc.getResultingTier(), kyc.getStatus(), kyc.getSubmittedAt());
+
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.PENDING_KYC_FETCHED)
+                        .userId(user.getId())
+                        .userEmail(user.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("kyc_entities")
+                        .build());
+
         return ResponseWrapper.<KycDto>builder()
                 .data(dto)
                 .message("fetch successfully")
@@ -181,6 +225,17 @@ public class AdminServiceImpl implements AdminService {
             log.error("Kyc Approval email failed to send to {}: {}", customer.getEmail(), e.getMessage());
         }
 
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.KYC_APPROVED)
+                        .userId(user.getId())
+                        .userEmail(user.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("kyc_entities")
+                        .build());
+
         return ResponseWrapper.<KycResolveResponse>builder()
                 .data(response)
                 .message("Kyc has Been approved")
@@ -211,6 +266,17 @@ public class AdminServiceImpl implements AdminService {
         } catch (Exception e){
             log.error("Kyc rejection email failed to send to {}: {}", customer.getEmail(), e.getMessage());
         }
+
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.KYC_REJECTED)
+                        .userId(user.getId())
+                        .userEmail(user.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("kyc_entities")
+                        .build());
 
         return ResponseWrapper.<KycResolveResponse>builder()
                 .data(response)
@@ -244,6 +310,17 @@ public class AdminServiceImpl implements AdminService {
             log.error("Suspension email failed to send to {}: {}", customer.getEmail(), e.getMessage());
         }
 
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.ACCOUNT_SUSPENDED)
+                        .userId(user.getId())
+                        .userEmail(user.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("accounts")
+                        .build());
+
         return ResponseWrapper.<String>builder()
                 .data(AccountStatus.FROZEN.name())
                 .message("Account successfully frozen")
@@ -275,6 +352,17 @@ public class AdminServiceImpl implements AdminService {
             log.error("Reactivation email failed to send to {}: {}", customer.getEmail(), e.getMessage());
         }
 
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.ACCOUNT_UNSUSPENDED)
+                        .userId(user.getId())
+                        .userEmail(user.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("accounts")
+                        .build());
+
         return ResponseWrapper.<String>builder()
                 .data(AccountStatus.ACTIVE.name())
                 .message("Account reactivated successfully")
@@ -286,6 +374,17 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public ResponseWrapper<BankOverviewDto> getOverview() {
         BankOverviewDto dto = buildOverview();
+
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.BANK_OVERVIEW)
+                        .userId(user.getId())
+                        .userEmail(user.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("accounts")
+                        .build());
 
         return ResponseWrapper.<BankOverviewDto>builder()
                 .data(dto)
@@ -338,6 +437,15 @@ public class AdminServiceImpl implements AdminService {
                 .address(address)
                 .build();
         Admin savedAdmin = adminRepository.save(admin);
+        // save audit log
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.ADMIN_REGISTRATION)
+                        .userId(savedAdmin.getId())
+                        .userEmail(savedAdmin.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("admin")
+                        .build());
         return new AdminCreationResponse(savedAdmin.getFirstName(), adminId);
     }
 

@@ -9,10 +9,7 @@ import com.groupa.digitalbackendapplication.domain.entities.*;
 import com.groupa.digitalbackendapplication.domain.enums.*;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
-import com.groupa.digitalbackendapplication.repository.AccountRepository;
-import com.groupa.digitalbackendapplication.repository.CardDetailsRepository;
-import com.groupa.digitalbackendapplication.repository.DailyTransactionsRepository;
-import com.groupa.digitalbackendapplication.repository.TransactionRepository;
+import com.groupa.digitalbackendapplication.repository.*;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.DepositService;
 import com.groupa.digitalbackendapplication.service.TransactionService;
@@ -23,6 +20,7 @@ import com.groupa.digitalbackendapplication.utils.TransactionUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -46,6 +44,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final DepositService depositService;
     private final TierLimiterUtil tierLimiterUtil;
     private final SecurityUtil securityUtil;
+    private final AuditLogRepository auditLogRepository;
 
     @Override
     @Transactional
@@ -116,6 +115,17 @@ public class TransactionServiceImpl implements TransactionService {
 
         dailyTransactionsRepository.save(dailyTransactions);
 
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.DEBIT_TRANSACTION_SUCCESS)
+                        .userId(user.getId())
+                        .userEmail(user.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("transactions")
+                        .build());
+
         return ResponseWrapper.<TransactionStatusResponse>builder()
                 .data(buildTransactionResponse(senderTransaction.getTransactionStatus()))
                 .message("Transaction successful")
@@ -152,6 +162,18 @@ public class TransactionServiceImpl implements TransactionService {
             DailyTransactions dailyTransactions = fetchDailyTransactionEntity();
             dailyTransactions.setTotalCredit(dailyTransactions.getTotalCredit().add(payload.depositAmount()));
             dailyTransactionsRepository.save(dailyTransactions);
+
+            // save audit log
+            User user = securityUtil.getSecurityPrincipal().getUser();
+            auditLogRepository.save(
+                    AuditLog.builder()
+                            .actionType(ActionType.SELF_CREDIT_TRANSACTION_SUCCESS)
+                            .userId(user.getId())
+                            .userEmail(user.getEmail())
+                            .timeOfCreation(LocalDateTime.now())
+                            .entityType("transactions")
+                            .build());
+
             return ResponseWrapper.<TransactionStatusResponse>builder()
                     .data(buildTransactionResponse(savedTransaction.getTransactionStatus()))
                     .message("Deposit Successful")
@@ -217,6 +239,17 @@ public class TransactionServiceImpl implements TransactionService {
 
         transactionRepository.save(transaction);
 
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.TRANSACTION_REQUERIED)
+                        .userId(user.getId())
+                        .userEmail(user.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("transactions")
+                        .build());
+
         return ResponseWrapper.<TransactionStatusResponse>builder()
                 .message(updatedTransactionStatus == TransactionStatus.SUCCESSFUL ? "Transaction Successful" : "Transaction Failed")
                 .data(buildTransactionResponse(updatedTransactionStatus))
@@ -239,6 +272,17 @@ public class TransactionServiceImpl implements TransactionService {
 
         System.out.println(transactions);
 
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.TRANSACTION_FETCHED)
+                        .userId(user.getId())
+                        .userEmail(user.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("transactions")
+                        .build());
+
         return ResponseWrapper.<List<TransactionHistoryResponseDto>>builder()
                 .data(transactions)
                 .message("Transactions fetched")
@@ -260,6 +304,17 @@ public class TransactionServiceImpl implements TransactionService {
         TransactionHistoryResponseDto dto =  new TransactionHistoryResponseDto(transaction.getId(),
                 transaction.getTransactionType(), transaction.getTransactionStatus(),sourceAccount,
                 transaction.getAmountTransferred(), transaction.getDescription(), transaction.getCreatedAt());
+
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.TRANSACTION_FETCHED)
+                        .userId(user.getId())
+                        .userEmail(user.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("transactions")
+                        .build());
 
         return ResponseWrapper.<TransactionHistoryResponseDto>builder()
                 .data(dto)

@@ -4,20 +4,18 @@ import com.groupa.digitalbackendapplication.domain.dto.request.ChangePasswordReq
 import com.groupa.digitalbackendapplication.domain.dto.request.CustomerRegistrationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
 import com.groupa.digitalbackendapplication.domain.entities.Account;
+import com.groupa.digitalbackendapplication.domain.entities.AuditLog;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
 import com.groupa.digitalbackendapplication.domain.entities.User;
-import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
-import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
-import com.groupa.digitalbackendapplication.domain.enums.Gender;
-import com.groupa.digitalbackendapplication.domain.enums.Role;
+import com.groupa.digitalbackendapplication.domain.enums.*;
 import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.notification.EmailDetails;
 import com.groupa.digitalbackendapplication.notification.EmailService;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
+import com.groupa.digitalbackendapplication.repository.AuditLogRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
-import com.groupa.digitalbackendapplication.repository.UserRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.CustomerService;
 import com.groupa.digitalbackendapplication.service.LoginSessionService;
@@ -30,13 +28,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Period;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -55,6 +53,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final SecurityUtil securityUtil;
     private final EncryptionUtil encryptionUtil;
     private final EmailService emailService;
+    private final AuditLogRepository auditLogRepository;
     private final OtpService otpService;
 
     @Override
@@ -80,6 +79,25 @@ public class CustomerServiceImpl implements CustomerService {
         Account account = buildAccount(userResponse.getCustomerId(), accountStatus, accountNumber, accountTier);
         AccountCreatedResponse createAccount = new AccountCreatedResponse(account.getAccountNumber());
         otpService.generateAndSendOtp(userResponse.getCustomerId(), account);
+
+        // save audit log entry
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.USER_REGISTRATION)
+                        .userId(userResponse.getCustomerId())
+                        .userEmail(payload.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("customer")
+                .build());
+
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.ACCOUNT_CREATED)
+                        .userId(userResponse.getCustomerId())
+                        .userEmail(payload.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("accounts")
+                        .build());
 
         return ResponseWrapper.<AccountCreatedResponse>builder()
                 .data(createAccount)
@@ -130,6 +148,28 @@ public class CustomerServiceImpl implements CustomerService {
                 .accountDto(accountDto)
                 .build();
 
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        if (user.getRole().equals(Role.CUSTOMER)) {
+            auditLogRepository.save(
+                    AuditLog.builder()
+                            .actionType(ActionType.USER_PROFILE_FETCHED)
+                            .userId(customer.getId())
+                            .userEmail(customer.getEmail())
+                            .timeOfCreation(LocalDateTime.now())
+                            .entityType("users")
+                            .build());
+        } else {
+            auditLogRepository.save(
+                    AuditLog.builder()
+                            .actionType(ActionType.USER_PROFILE_FETCHED)
+                            .userId(user.getId())
+                            .userEmail(user.getEmail())
+                            .timeOfCreation(LocalDateTime.now())
+                            .entityType("users")
+                            .build());
+        }
+
         return Response.<CustomerDto>builder()
                 .data(customerDto)
                 .message("Success")
@@ -150,6 +190,16 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setPassword(passwordEncoder.encode(payload.confirmPassword()));
         customer.setUpdatedAt(LocalDateTime.now());
         customerRepository.save(customer);
+
+        // save audit log
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.PASSWORD_CHANGED)
+                        .userId(customer.getId())
+                        .userEmail(customer.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("customer")
+                        .build());
 
         return ResponseWrapper.<String>builder()
                 .message("Password reset successful")

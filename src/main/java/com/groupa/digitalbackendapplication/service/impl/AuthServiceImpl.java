@@ -7,9 +7,11 @@ import com.groupa.digitalbackendapplication.domain.dto.request.ForgetPasswordReq
 import com.groupa.digitalbackendapplication.domain.dto.response.AdminCreationResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
 import com.groupa.digitalbackendapplication.domain.entities.Admin;
+import com.groupa.digitalbackendapplication.domain.entities.AuditLog;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
 import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.entities.User;
+import com.groupa.digitalbackendapplication.domain.enums.ActionType;
 import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
 import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
 import com.groupa.digitalbackendapplication.domain.response.LogoutResponse;
@@ -18,6 +20,7 @@ import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
 import com.groupa.digitalbackendapplication.repository.AdminRepository;
+import com.groupa.digitalbackendapplication.repository.AuditLogRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
 import com.groupa.digitalbackendapplication.repository.UserRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
@@ -54,6 +57,7 @@ public class AuthServiceImpl implements AuthService {
     private final LoginSessionService loginSessionService;
     private final AdminRepository adminRepository;
     private final AdminService adminService;
+    private final AuditLogRepository auditLogRepository;
 
     @Override
     public ResponseWrapper<AdminCreationResponse> createAdmin(AdminCreationRequest payload) {
@@ -93,6 +97,16 @@ public class AuthServiceImpl implements AuthService {
                 .accessToken(token)
                 .refreshToken(refreshToken)
                 .build();
+
+        // save audit log
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.USER_LOGIN)
+                        .userId(userId)
+                        .userEmail(email)
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("customer")
+                        .build());
 
         return Response.<LoginResponse>builder()
                 .statusCode(HttpStatus.OK.value())
@@ -134,6 +148,16 @@ public class AuthServiceImpl implements AuthService {
                 .accessToken(token)
                 .refreshToken(refreshToken)
                 .build();
+
+        // save audit log
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.ADMIN_REGISTRATION)
+                        .userId(userId)
+                        .userEmail(admin.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("admin")
+                        .build());
 
         return Response.<LoginResponse>builder()
                 .statusCode(HttpStatus.OK.value())
@@ -189,15 +213,27 @@ public class AuthServiceImpl implements AuthService {
                     .role(customer.getRole().name())
                     .build();
 
+            // save audit log
+            auditLogRepository.save(
+                    AuditLog.builder()
+                            .actionType(ActionType.ANOTHER_ACCESS_TOKEN)
+                            .userId(customer.getId())
+                            .userEmail(customer.getEmail())
+                            .timeOfCreation(LocalDateTime.now())
+                            .entityType("user")
+                            .build());
+
+            System.out.println("Audit log saved");
+
             return Response.<LoginResponse>builder()
                     .statusCode(HttpStatus.OK.value())
                     .message("Login successful")
                     .data(loginResponse)
                     .build();
         } else {
-            System.out.println(tokenService.validateRefreshToken(refreshToken) + ". Refresh token is invalid");
+            throw new BadRequestException("Something went wrong");
         }
-        throw new BadRequestException("Something went wrong");
+
     }
 
     @Override
@@ -212,6 +248,16 @@ public class AuthServiceImpl implements AuthService {
         refreshSessionService.invalidateLoginSession(userId);
 
         LogoutResponse logoutResponse = new LogoutResponse("Logout Successful");
+
+        // save audit log
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.USER_LOGOUT)
+                        .userId(userId)
+                        .userEmail(authUser.getUser().getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("user")
+                        .build());
 
         return Response.<LogoutResponse>builder()
                 .message("Success")
@@ -232,6 +278,16 @@ public class AuthServiceImpl implements AuthService {
         customer.setUpdatedAt(LocalDateTime.now());
         customerRepository.save(customer);
 
+        // save audit log
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.PASSWORD_CHANGED)
+                        .userId(customer.getId())
+                        .userEmail(customer.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("customer")
+                        .build());
+
         return ResponseWrapper.<String>builder()
                 .message("Password reset successful")
                 .statusCode(HttpStatus.ACCEPTED)
@@ -249,6 +305,16 @@ public class AuthServiceImpl implements AuthService {
         admin.setPassword(passwordEncoder.encode(payload.confirmPassword()));
         admin.setUpdatedAt(LocalDateTime.now());
         adminRepository.save(admin);
+
+        // save audit log
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.PASSWORD_CHANGED)
+                        .userId(admin.getId())
+                        .userEmail(admin.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("admin")
+                        .build());
 
         return ResponseWrapper.<String>builder()
                 .message("Password reset successful")
