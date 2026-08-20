@@ -21,10 +21,11 @@ public class BusinessRegistrationRequest {
     private String businessAddress;
 
     @NotBlank(message = "Cac number cannot be null or empty")
-    @Pattern(regexp = "[RC|BN|IT|LP] [0-9]{6}", message = "Invalid cac format")
+    @Pattern(regexp = "^(?:RC|BN|IT|LP|LLP) \\d{5,7}$", message = "Invalid cac format")
     private String cacNumber;
 
-    @NotBlank(message = "Phone number cannot be null or empty")
+    @NotBlank(message = "Password cannot be null or empty")
+    @Pattern(regexp = "^(?=.*\\d)(?=.*[A-Z]).{10,15}$", message = "Password should contain at least one number, one letter and must be 10 to 15 characters long")
     private String password;
 
     @NotBlank(message = "Business email cannot be null or empty")

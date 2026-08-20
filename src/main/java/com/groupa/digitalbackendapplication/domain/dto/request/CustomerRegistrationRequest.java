@@ -30,6 +30,7 @@ public class CustomerRegistrationRequest {
     private String email;
 
     @NotBlank(message = "Password cannot be null or empty")
+    @Pattern(regexp = "^(?=.*\\d)(?=.*[A-Z]).{10,15}$", message = "Password should contain at least one number, one letter and must be 10 to 15 characters long")
     private String password;
 
     @NotBlank(message = "Phone number cannot be null or empty")
