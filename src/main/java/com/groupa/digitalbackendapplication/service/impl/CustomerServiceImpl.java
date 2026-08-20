@@ -4,23 +4,22 @@ import com.groupa.digitalbackendapplication.domain.dto.request.ChangePasswordReq
 import com.groupa.digitalbackendapplication.domain.dto.request.CustomerRegistrationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
 import com.groupa.digitalbackendapplication.domain.entities.Account;
+import com.groupa.digitalbackendapplication.domain.entities.AuditLog;
 import com.groupa.digitalbackendapplication.domain.entities.Customer;
 import com.groupa.digitalbackendapplication.domain.entities.User;
-import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
-import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
-import com.groupa.digitalbackendapplication.domain.enums.Gender;
-import com.groupa.digitalbackendapplication.domain.enums.Role;
+import com.groupa.digitalbackendapplication.domain.enums.*;
 import com.groupa.digitalbackendapplication.domain.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.notification.EmailDetails;
 import com.groupa.digitalbackendapplication.notification.EmailService;
 import com.groupa.digitalbackendapplication.repository.AccountRepository;
+import com.groupa.digitalbackendapplication.repository.AuditLogRepository;
 import com.groupa.digitalbackendapplication.repository.CustomerRepository;
-import com.groupa.digitalbackendapplication.repository.UserRepository;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.CustomerService;
 import com.groupa.digitalbackendapplication.service.LoginSessionService;
+import com.groupa.digitalbackendapplication.service.OtpService;
 import com.groupa.digitalbackendapplication.utils.AccountUtil;
 import com.groupa.digitalbackendapplication.utils.LoginSessionUtil;
 import com.groupa.digitalbackendapplication.utils.EncryptionUtil;
@@ -29,13 +28,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Period;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -54,11 +53,13 @@ public class CustomerServiceImpl implements CustomerService {
     private final SecurityUtil securityUtil;
     private final EncryptionUtil encryptionUtil;
     private final EmailService emailService;
+    private final AuditLogRepository auditLogRepository;
+    private final OtpService otpService;
 
     @Override
     public ResponseWrapper<AccountCreatedResponse> createPersonalAccount(CustomerRegistrationRequest payload) {
         Role userRole = Role.CUSTOMER;
-        AccountStatus accountStatus = AccountStatus.ACTIVE;
+        AccountStatus accountStatus = AccountStatus.PENDING_VERIFICATION;
         AccountTier accountTier = AccountTier.TIER_1;
 
         if(validatePhoneNumber(payload.getPhoneNumber())) throw new BadRequestException("Error occurred: please provide another phone number");
@@ -72,23 +73,36 @@ public class CustomerServiceImpl implements CustomerService {
                 payload.getPhoneNumber(), userRole, payload.getGender(), payload.getDateOfBirth(), payload.getAddress());
 
         String accountNumber = accountUtil.generateAccountNumber();
-        //Continue account creation
-        AccountCreatedResponse createAccount = buildAccount(userResponse.getCustomerId(), accountStatus, accountNumber, accountTier);
 
-        try {
-            sendWelcomeEmail(payload.getFirstName(), payload.getEmail());
-        } catch (Exception e){
-            log.error("Customer welcome email failed to send to {}: {}", payload.getEmail(), e.getMessage());
-        }
-        try {
-            sendAccountCreationEmail(payload.getFirstName(), payload.getEmail(), createAccount.getAccountNumber(), accountTier);
-        } catch (Exception e){
-            log.error("Welcome email could not be sent to {}: {}", payload.getEmail(), e.getMessage());
-        }
+        //Continue account creation
+
+        Account account = buildAccount(userResponse.getCustomerId(), accountStatus, accountNumber, accountTier);
+        AccountCreatedResponse createAccount = new AccountCreatedResponse(account.getAccountNumber());
+        otpService.generateAndSendOtp(userResponse.getCustomerId(), account);
+
+        // save audit log entry
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.USER_REGISTRATION)
+                        .userId(userResponse.getCustomerId())
+                        .userEmail(payload.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("customer")
+                .build());
+
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.ACCOUNT_CREATED)
+                        .userId(userResponse.getCustomerId())
+                        .userEmail(payload.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("accounts")
+                        .build());
 
         return ResponseWrapper.<AccountCreatedResponse>builder()
                 .data(createAccount)
-                .message("Account Creation Successful")
+                .message("Account created successful." +
+                        "Please verify your account with the OTP sent to you.")
                 .statusCode(HttpStatus.CREATED)
                 .build();
     }
@@ -134,6 +148,28 @@ public class CustomerServiceImpl implements CustomerService {
                 .accountDto(accountDto)
                 .build();
 
+        // save audit log
+        User user = securityUtil.getSecurityPrincipal().getUser();
+        if (user.getRole().equals(Role.CUSTOMER)) {
+            auditLogRepository.save(
+                    AuditLog.builder()
+                            .actionType(ActionType.USER_PROFILE_FETCHED)
+                            .userId(customer.getId())
+                            .userEmail(customer.getEmail())
+                            .timeOfCreation(LocalDateTime.now())
+                            .entityType("users")
+                            .build());
+        } else {
+            auditLogRepository.save(
+                    AuditLog.builder()
+                            .actionType(ActionType.USER_PROFILE_FETCHED)
+                            .userId(user.getId())
+                            .userEmail(user.getEmail())
+                            .timeOfCreation(LocalDateTime.now())
+                            .entityType("users")
+                            .build());
+        }
+
         return Response.<CustomerDto>builder()
                 .data(customerDto)
                 .message("Success")
@@ -154,6 +190,16 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setPassword(passwordEncoder.encode(payload.confirmPassword()));
         customer.setUpdatedAt(LocalDateTime.now());
         customerRepository.save(customer);
+
+        // save audit log
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.PASSWORD_CHANGED)
+                        .userId(customer.getId())
+                        .userEmail(customer.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("customer")
+                        .build());
 
         return ResponseWrapper.<String>builder()
                 .message("Password reset successful")
@@ -180,7 +226,7 @@ public class CustomerServiceImpl implements CustomerService {
         return new SavedCustomerResponse(savedCustomer.getId());
     }
 
-    private AccountCreatedResponse buildAccount(UUID ownerId, AccountStatus accountStatus, String accountNumber, AccountTier accountTier){
+    private Account buildAccount(UUID ownerId, AccountStatus accountStatus, String accountNumber, AccountTier accountTier){
         Account account = Account.builder()
                 .ownerId(ownerId)
                 .accountStatus(accountStatus)
@@ -188,22 +234,7 @@ public class CustomerServiceImpl implements CustomerService {
                 .accountTier(accountTier)
                 .balance(BigDecimal.ZERO)
                 .build();
-        accountRepository.save(account);
-        return new AccountCreatedResponse(account.getAccountNumber());
-    }
-
-    private void sendWelcomeEmail(String firstname, String email){
-        String welcomeMessage = "Welcome, " + firstname + "!\n\n" +
-                "We are excited to have you on board at PAYEDGE DIGITAL BANKING. \n\n" +
-                "Start enjoying seamless deposits, withdrawals, transfers and monthly statements. \n\n" +
-                "Your financial journey starts here!";
-
-        EmailDetails emailDetails = EmailDetails.builder()
-                .recipient(email)
-                .subject("Welcome to PayEdge Digital Banking")
-                .messageBody(welcomeMessage)
-                .build();
-        emailService.sendEmail(emailDetails);
+        return accountRepository.save(account);
     }
 
     private void sendAccountCreationEmail(String firstname, String email, String accountNumber, AccountTier accountTier){

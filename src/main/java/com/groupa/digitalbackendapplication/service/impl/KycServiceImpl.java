@@ -3,19 +3,14 @@ package com.groupa.digitalbackendapplication.service.impl;
 import com.groupa.digitalbackendapplication.domain.dto.request.KycSubmissionRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.KycSubmissionResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
-import com.groupa.digitalbackendapplication.domain.entities.Account;
-import com.groupa.digitalbackendapplication.domain.entities.Customer;
-import com.groupa.digitalbackendapplication.domain.entities.KycEntity;
-import com.groupa.digitalbackendapplication.domain.entities.User;
+import com.groupa.digitalbackendapplication.domain.entities.*;
 import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
+import com.groupa.digitalbackendapplication.domain.enums.ActionType;
 import com.groupa.digitalbackendapplication.domain.enums.KycDocumentType;
 import com.groupa.digitalbackendapplication.domain.enums.KycStatus;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
-import com.groupa.digitalbackendapplication.repository.AccountRepository;
-import com.groupa.digitalbackendapplication.repository.CustomerRepository;
-import com.groupa.digitalbackendapplication.repository.UserRepository;
-import com.groupa.digitalbackendapplication.repository.KycEntityRepository;
+import com.groupa.digitalbackendapplication.repository.*;
 import com.groupa.digitalbackendapplication.security.AuthUser;
 import com.groupa.digitalbackendapplication.service.KycService;
 import com.groupa.digitalbackendapplication.utils.EncryptionUtil;
@@ -23,6 +18,7 @@ import com.groupa.digitalbackendapplication.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -40,6 +36,7 @@ public class KycServiceImpl implements KycService {
     private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
     private final EncryptionUtil encryptionUtil;
+    private final AuditLogRepository auditLogRepository;
 
     private static final Pattern ELEVEN_DIGITS = Pattern.compile("\\d{11}");
 
@@ -82,6 +79,15 @@ public class KycServiceImpl implements KycService {
         KycSubmissionResponse message = buildKycEntity(customer.getId(),account.getId(),payload.getDocumentType(),
                 payload.getSubmittedValue(),KycStatus.PENDING, null, resultingTier);
 
+        // save audit log
+        auditLogRepository.save(
+                AuditLog.builder()
+                        .actionType(ActionType.KYC_SUBMITTED)
+                        .userId(customer.getId())
+                        .userEmail(customer.getEmail())
+                        .timeOfCreation(LocalDateTime.now())
+                        .entityType("kyc_entities")
+                        .build());
 
         return ResponseWrapper.<KycSubmissionResponse>builder()
                 .data(message)
