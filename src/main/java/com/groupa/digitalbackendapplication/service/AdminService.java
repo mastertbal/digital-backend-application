@@ -19,6 +19,7 @@ public interface AdminService {
     Response<CustomerDto> getCustomerProfile(String accountNumber);
     ResponseWrapper<Page<CustomerDto>> getAllCustomer(Pageable pageable);
     ResponseWrapper<TransactionHistoryResponseDto> getTransactionById(UUID transactionId);
+    ResponseWrapper<List<TransactionHistoryResponseDto>> getCustomerTransactions(String accountNumber);
     ResponseWrapper<Page<KycDto>> fetchAllPendingKyc(Pageable pageable);
     ResponseWrapper<KycDto> fetchPendingKycById(UUID id);
     ResponseWrapper<KycResolveResponse> approveKyc(UUID kycId);
