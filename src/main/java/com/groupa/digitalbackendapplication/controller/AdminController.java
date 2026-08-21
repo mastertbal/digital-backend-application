@@ -94,6 +94,12 @@ public class AdminController {
     public ResponseWrapper<TransactionHistoryResponseDto> getTransactionById(@PathVariable("transaction-id") UUID id){
         return adminService.getTransactionById(id);
     }
+
+    @Operation(security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/customer-transactions/{account-number}")
+    public ResponseWrapper<List<TransactionHistoryResponseDto>> getCustomerTransactions(@PathVariable("account-number") String accountNumber){
+        return adminService.getCustomerTransactions(accountNumber);
+    }
     @Operation(security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/stats")
     public ResponseWrapper<BankOverviewDto> getBankStat(){
