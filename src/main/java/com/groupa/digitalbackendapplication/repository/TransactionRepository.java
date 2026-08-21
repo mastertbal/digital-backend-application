@@ -12,4 +12,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     @Query("select t from Transaction t where t.destinationAccount = :account")
     List<Transaction> findAllByDestinationAccount(Account account);
+
+    @Query("select t from Transaction t where t.sourceAccount = :account or t.destinationAccount = :account order by t.createdAt desc")
+    List<Transaction> findAllByAccount(Account account);
 }
