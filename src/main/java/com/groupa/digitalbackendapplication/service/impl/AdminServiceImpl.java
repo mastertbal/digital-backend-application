@@ -51,6 +51,7 @@ public class AdminServiceImpl implements AdminService {
     private final SecurityUtil securityUtil;
     private final CustomerService customerService;
     private final TransactionService transactionService;
+    private final TransactionRepository transactionRepository;
     private final AuditLogRepository auditLogRepository;
 
 
@@ -149,6 +150,30 @@ public class AdminServiceImpl implements AdminService {
                         .entityType("transactions")
                         .build());
         return transactionService.getTransactionById(transactionId);
+    }
+
+    @Override
+    public ResponseWrapper<List<TransactionHistoryResponseDto>> getCustomerTransactions(String accountNumber) {
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+
+        List<TransactionHistoryResponseDto> transactions = transactionRepository.findAllByAccount(account)
+                .stream()
+                .map(t -> new TransactionHistoryResponseDto(
+                        t.getId(),
+                        t.getTransactionType(),
+                        t.getTransactionStatus(),
+                        t.getSourceAccount() != null ? t.getSourceAccount().getAccountNumber() : null,
+                        t.getAmountTransferred(),
+                        t.getDescription(),
+                        t.getCreatedAt()))
+                .toList();
+
+        return ResponseWrapper.<List<TransactionHistoryResponseDto>>builder()
+                .data(transactions)
+                .message("Transactions fetched")
+                .statusCode(HttpStatus.OK)
+                .build();
     }
 
     @Override

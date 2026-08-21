@@ -40,6 +40,7 @@ public class AuthFilter extends OncePerRequestFilter {
 
                 if (request.getServletPath().equals("/api/auth/new-access-token")) {
                     filterChain.doFilter(request, response);
+                    return;
                 }
 
                 if (tokenService.containsRefreshToken(token)) {
@@ -57,22 +58,33 @@ public class AuthFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                 }
             }
-        }catch (BadRequestException e) {
+        } catch (BadRequestException e) {
             log.error("Use the right access token");
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             response.getWriter().write("Invalid token");
             return;
-        }
-        catch (Exception e) {
-            log.error("Exception occurred while processing token");
-            throw new BadCredentialsException(e.getMessage());
+        } catch (ExpiredJwtException e) {
+            log.error("JWT token expired: {}", e.getMessage());
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"message\":\"Session expired. Please log in again.\",\"statusCode\":401}");
+            return;
+        } catch (JwtException e) {
+            log.error("Invalid JWT token: {}", e.getMessage());
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"message\":\"Invalid token. Please log in again.\",\"statusCode\":401}");
+            return;
+        } catch (Exception e) {
+            log.error("Exception occurred while processing token: {}", e.getMessage());
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"message\":\"Authentication failed. Please log in again.\",\"statusCode\":401}");
+            return;
         }
 
-        try {
-            filterChain.doFilter(request, response);
-        }catch (Exception e) {
-            log.error(e.getMessage());
-        }
+        // Pass request to the next filter/controller — let Spring handle any errors from here
+        filterChain.doFilter(request, response);
     }
 
     private String getTokenFromRequest(HttpServletRequest request) {
