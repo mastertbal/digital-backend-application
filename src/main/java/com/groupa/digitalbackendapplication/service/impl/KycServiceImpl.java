@@ -130,7 +130,7 @@ public class KycServiceImpl implements KycService {
                 .rejectionReason(rejectionReason)
                 .resultingTier(resultingTier)
                 .submittedAt(LocalDateTime.now())
-                .resolvedAt(null)
+                .resolvedAt(LocalDateTime.now())
                 .build();
         kycEntityRepository.save(save);
 
