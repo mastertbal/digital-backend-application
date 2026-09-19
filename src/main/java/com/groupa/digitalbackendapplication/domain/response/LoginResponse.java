@@ -1,4 +1,4 @@
-package com.groupa.digitalbackendapplication.domain.dto.response;
+package com.groupa.digitalbackendapplication.domain.response;
 
 import lombok.Builder;
 import lombok.Data;

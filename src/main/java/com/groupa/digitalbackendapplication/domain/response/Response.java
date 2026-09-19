@@ -1,4 +1,4 @@
-package com.groupa.digitalbackendapplication.domain.dto.response;
+package com.groupa.digitalbackendapplication.domain.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;

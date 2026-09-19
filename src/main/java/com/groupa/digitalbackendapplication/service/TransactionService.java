@@ -15,9 +15,9 @@ public interface TransactionService {
 
     ResponseWrapper<TransactionStatusResponse> depositFunds(@Valid CardDetailsRequest payload);
 
-    ResponseWrapper<TransactionStatusResponse> requeryTransaction(String accountNumber, UUID id);
+    ResponseWrapper<TransactionStatusResponse> requeryTransaction(UUID id);
 
-    ResponseWrapper<List<TransactionHistoryResponseDto>> getAllTransactionHistory(String accountNumber);
+    ResponseWrapper<List<TransactionHistoryResponseDto>> getAllTransactionHistory();
 
     ResponseWrapper<TransactionHistoryResponseDto> getTransactionById(UUID transactionId);
 }
