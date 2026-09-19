@@ -3,7 +3,7 @@ package com.groupa.digitalbackendapplication.service;
 import com.groupa.digitalbackendapplication.domain.dto.request.ResendOtpRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.VerifyOtpRequest;
 import com.groupa.digitalbackendapplication.domain.entities.Account;
-import com.groupa.digitalbackendapplication.domain.response.Response;
+import com.groupa.digitalbackendapplication.domain.dto.response.Response;
 
 import java.util.UUID;
 

@@ -6,6 +6,10 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public record TransferFundsRequest(
+
+        @NotNull(message = "Source account required")
+        String sourceAccount,
+
         @NotNull(message = "amount is required")
         BigDecimal amount,
 
@@ -13,6 +17,9 @@ public record TransferFundsRequest(
         String destinationAccount,
 
         @NotBlank(message = "description is a required field")
-        String description
+        String description,
+
+        @NotNull(message = "Provide your transaction pin")
+        Integer transactionPin
 ) {
 }

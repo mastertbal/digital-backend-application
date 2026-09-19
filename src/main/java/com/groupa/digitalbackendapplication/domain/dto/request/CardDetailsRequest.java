@@ -6,6 +6,10 @@ import java.math.BigDecimal;
 import java.time.YearMonth;
 
 public record CardDetailsRequest(
+
+        @NotNull(message = "Destination account required")
+        String destinationAccount,
+
         @NotBlank(message = "cardNumber is a required field")
         String cardNumber,
 

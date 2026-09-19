@@ -1,11 +1,10 @@
 package com.groupa.digitalbackendapplication.controller;
 
 import com.groupa.digitalbackendapplication.domain.dto.request.AccountSuspensionRequest;
-import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
 import com.groupa.digitalbackendapplication.domain.dto.request.KycRejectionRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
 import com.groupa.digitalbackendapplication.domain.entities.AuditLog;
-import com.groupa.digitalbackendapplication.domain.response.Response;
+import com.groupa.digitalbackendapplication.domain.dto.response.Response;
 import com.groupa.digitalbackendapplication.service.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

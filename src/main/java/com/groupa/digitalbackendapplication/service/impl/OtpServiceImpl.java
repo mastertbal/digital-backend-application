@@ -8,7 +8,7 @@ import com.groupa.digitalbackendapplication.domain.entities.OtpVerification;
 import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
 import com.groupa.digitalbackendapplication.domain.enums.OtpChannel;
-import com.groupa.digitalbackendapplication.domain.response.Response;
+import com.groupa.digitalbackendapplication.domain.dto.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.notification.EmailDetails;
@@ -101,7 +101,7 @@ public class OtpServiceImpl implements OtpService {
         Account account = accountRepository.findByAccountNumber(request.getAccountNumber())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
-        Customer customer = customerRepository.findById(account.getOwnerId())
+        Customer customer = customerRepository.findById(account.getCustomer().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
         if (account.getAccountStatus() == AccountStatus.ACTIVE) {
@@ -152,7 +152,7 @@ public class OtpServiceImpl implements OtpService {
     public Response<String> resendOtp(ResendOtpRequest request) {
         Account account = accountRepository.findByAccountNumber(request.getAccountNumber())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
-        UUID customerId = account.getOwnerId();
+        UUID customerId = account.getCustomer().getId();
 
         if (account.getAccountStatus() == AccountStatus.ACTIVE) {
             throw new BadRequestException("Account is already active.");

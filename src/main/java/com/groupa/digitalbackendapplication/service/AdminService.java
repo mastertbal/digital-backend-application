@@ -5,7 +5,7 @@ import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequ
 import com.groupa.digitalbackendapplication.domain.dto.request.KycRejectionRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
 import com.groupa.digitalbackendapplication.domain.entities.AuditLog;
-import com.groupa.digitalbackendapplication.domain.response.Response;
+import com.groupa.digitalbackendapplication.domain.dto.response.Response;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

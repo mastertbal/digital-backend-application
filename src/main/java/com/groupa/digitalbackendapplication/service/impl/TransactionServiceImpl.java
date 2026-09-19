@@ -25,7 +25,9 @@ import com.groupa.digitalbackendapplication.utils.TransactionUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -51,11 +53,15 @@ public class TransactionServiceImpl implements TransactionService {
     private final SecurityUtil securityUtil;
     private final TransactionAlertService transactionAlertService;
     private final AuditLogRepository auditLogRepository;
+    private final CustomerRepository customerRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
     public ResponseWrapper<TransactionStatusResponse> transferFunds(@Valid TransferFundsRequest payload) {
-        Account sourceAccount = getAuthenticatedUser();
+        Customer customer = getAuthenticatedUser();
+
+        Account sourceAccount = getAuthenticatedUserAccount(customer, payload.sourceAccount());
 
         if(!isAccountActive(sourceAccount.getAccountNumber()))
             throw new BadRequestException("Your account is " + sourceAccount.getAccountStatus().name() + ". contact bank to rectify");
@@ -74,6 +80,9 @@ public class TransactionServiceImpl implements TransactionService {
 
         if (payload.amount().compareTo(sourceAccount.getBalance()) > 0)
             throw new BadRequestException("Insufficient funds in account");
+
+        if(!passwordEncoder.matches(String.valueOf(payload.transactionPin()), customer.getTransactionCode()))
+            throw new BadCredentialsException("Wrong transaction pin");
 
         Transaction senderTransaction = TransactionUtil.buildTransactionEntity(TransactionType.TRANSFER, TransactionStatus.SUCCESSFUL, sourceAccount,
                 destinationAccount, payload.amount(), payload.description().trim());
@@ -144,7 +153,8 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public ResponseWrapper<TransactionStatusResponse> depositFunds(@Valid CardDetailsRequest payload) {
-        Account destinationAccount = getAuthenticatedUser();
+        Customer customer = getAuthenticatedUser();
+        Account destinationAccount = getAuthenticatedUserAccount(customer, payload.destinationAccount());
 
         if(!isAccountActive(destinationAccount.getAccountNumber()))
             throw new BadRequestException("Your account is " + destinationAccount.getAccountStatus().name() + ". contact bank to rectify");
@@ -203,8 +213,9 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
-    public ResponseWrapper<TransactionStatusResponse> requeryTransaction(UUID id) {
-        Account loggedInAccount = getAuthenticatedUser();
+    public ResponseWrapper<TransactionStatusResponse> requeryTransaction(String accountNumber, UUID id) {
+        Customer customer = getAuthenticatedUser();
+        Account loggedInAccount = getAuthenticatedUserAccount(customer, accountNumber);
 
         if(!isAccountActive(loggedInAccount.getAccountNumber()))
             throw new BadRequestException("Your account is " + loggedInAccount.getAccountStatus().name() + ". contact bank to rectify");
@@ -276,8 +287,9 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public ResponseWrapper<List<TransactionHistoryResponseDto>> getAllTransactionHistory() {
-        Account account = getAuthenticatedUser();
+    public ResponseWrapper<List<TransactionHistoryResponseDto>> getAllTransactionHistory(String accountNumber) {
+        Customer customer = getAuthenticatedUser();
+        Account account = getAuthenticatedUserAccount(customer, accountNumber);
 
         if(!isAccountActive(account.getAccountNumber()))
             throw new BadRequestException("Your account is " + account.getAccountStatus().name() + ". contact bank to rectify");
@@ -350,12 +362,17 @@ public class TransactionServiceImpl implements TransactionService {
                 .orElse(new DailyTransactions(BigDecimal.valueOf(0), BigDecimal.valueOf(0)));
     }
 
-    private Account getAuthenticatedUser() {
+    private Account getAuthenticatedUserAccount(Customer customer, String accountNumber) {
+        return accountRepository.findByCustomerIdAndAccountNumber(customer.getId(), accountNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+    }
+
+    private Customer getAuthenticatedUser() {
         AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
         User user = loggedInUser.getUser();
 
-        return accountRepository.findByOwnerId(user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+        return customerRepository.findById(user.getId())
+                .orElseThrow(()-> new ResourceNotFoundException("Customer not found"));
     }
 
     private boolean isAccountActive(String accountNumber){

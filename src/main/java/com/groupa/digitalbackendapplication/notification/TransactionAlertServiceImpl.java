@@ -24,7 +24,7 @@ public class TransactionAlertServiceImpl implements TransactionAlertService {
     @Override
     public void sendDebitAlert(Account account, BigDecimal amount, LocalDateTime now) {
         try{
-            Customer customer = getCustomer(account.getOwnerId());
+            Customer customer = getCustomer(account.getCustomer().getId());
             String message = "Dear " + customer.getFirstName() + ",\n\n" +
                     "Your account has been debited with NGN " + amount + "\n" +
                     "Account Number: " + account.getAccountNumber() + "\n" +
@@ -50,7 +50,7 @@ public class TransactionAlertServiceImpl implements TransactionAlertService {
     @Override
     public void sendCreditAlert(Account account, BigDecimal amount, LocalDateTime now) {
         try{
-            Customer customer = getCustomer(account.getOwnerId());
+            Customer customer = getCustomer(account.getCustomer().getId());
             String message = "Dear " + customer.getFirstName() + ",\n\n" +
                     "Your account has been credited with NGN " + amount + "\n" +
                     "Account Number: " + account.getAccountNumber() + "\n" +
@@ -73,7 +73,7 @@ public class TransactionAlertServiceImpl implements TransactionAlertService {
     @Override
     public void sendTransactionDeclinedAlert(Account account, BigDecimal amount, LocalDateTime now) {
         try{
-            Customer customer = getCustomer(account.getOwnerId());
+            Customer customer = getCustomer(account.getCustomer().getId());
             String message = "Dear " + customer.getFirstName() + ",\n\n" +
                     "Your transaction of NGN " + amount + " was declined.\n" +
                     "Account Number: " + account.getAccountNumber() + "\n" +

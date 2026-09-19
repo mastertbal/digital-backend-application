@@ -2,6 +2,7 @@ package com.groupa.digitalbackendapplication.domain.dto.response;
 
 import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
+import com.groupa.digitalbackendapplication.domain.enums.PersonalAccountType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,6 +24,8 @@ public class AccountDto {
     private BigDecimal balance;
 
     private AccountTier accountTier;
+
+    private PersonalAccountType accountType;
 
     private AccountStatus accountStatus;
 

@@ -45,13 +45,13 @@ public class TransactionController {
 
     @PutMapping("/requery/{transaction-id}")
     @Operation(summary = "Requery Pending Transactions", method = "PUT")
-    public ResponseEntity<ResponseWrapper<TransactionStatusResponse>> requery(@PathVariable("transaction-id") UUID id){
-        return ResponseEntity.status(HttpStatus.OK).body(transactionService.requeryTransaction(id));
+    public ResponseEntity<ResponseWrapper<TransactionStatusResponse>> requery(@PathVariable("transaction-id") UUID id, @RequestBody String accountNumber){
+        return ResponseEntity.status(HttpStatus.OK).body(transactionService.requeryTransaction(accountNumber, id));
     }
 
-    @GetMapping("/transaction-history")
+    @GetMapping("/transaction-history/{account-number}")
     @Operation(summary = "Get Transaction history of customer", method = "GET")
-    public ResponseEntity<ResponseWrapper<List<TransactionHistoryResponseDto>>> getAllTransactionHistory(){
-        return ResponseEntity.ok(transactionService.getAllTransactionHistory());
+    public ResponseEntity<ResponseWrapper<List<TransactionHistoryResponseDto>>> getAllTransactionHistory(@PathVariable("account-number") String accountNumber){
+        return ResponseEntity.ok(transactionService.getAllTransactionHistory(accountNumber));
     }
 }

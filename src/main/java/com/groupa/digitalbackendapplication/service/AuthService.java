@@ -4,10 +4,10 @@ import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequ
 import com.groupa.digitalbackendapplication.domain.dto.request.ForgetPasswordRequest;
 import com.groupa.digitalbackendapplication.domain.dto.response.AdminCreationResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
-import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
-import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
-import com.groupa.digitalbackendapplication.domain.response.LogoutResponse;
-import com.groupa.digitalbackendapplication.domain.response.Response;
+import com.groupa.digitalbackendapplication.domain.dto.request.LoginRequest;
+import com.groupa.digitalbackendapplication.domain.dto.response.LoginResponse;
+import com.groupa.digitalbackendapplication.domain.dto.response.LogoutResponse;
+import com.groupa.digitalbackendapplication.domain.dto.response.Response;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 

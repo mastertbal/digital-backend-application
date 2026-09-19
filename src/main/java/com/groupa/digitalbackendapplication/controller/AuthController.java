@@ -1,16 +1,15 @@
 package com.groupa.digitalbackendapplication.controller;
 
-import com.groupa.digitalbackendapplication.domain.dto.request.ResendOtpRequest;
-import com.groupa.digitalbackendapplication.domain.dto.request.VerifyOtpRequest;
-import com.groupa.digitalbackendapplication.domain.dto.request.AdminCreationRequest;
-import com.groupa.digitalbackendapplication.domain.dto.request.ForgetPasswordRequest;
+import com.groupa.digitalbackendapplication.domain.dto.request.*;
+import com.groupa.digitalbackendapplication.domain.dto.response.AccountCreatedResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.AdminCreationResponse;
 import com.groupa.digitalbackendapplication.domain.dto.response.ResponseWrapper;
-import com.groupa.digitalbackendapplication.domain.request.LoginRequest;
-import com.groupa.digitalbackendapplication.domain.response.LoginResponse;
-import com.groupa.digitalbackendapplication.domain.response.LogoutResponse;
-import com.groupa.digitalbackendapplication.domain.response.Response;
+import com.groupa.digitalbackendapplication.domain.dto.request.LoginRequest;
+import com.groupa.digitalbackendapplication.domain.dto.response.LoginResponse;
+import com.groupa.digitalbackendapplication.domain.dto.response.LogoutResponse;
+import com.groupa.digitalbackendapplication.domain.dto.response.Response;
 import com.groupa.digitalbackendapplication.service.AuthService;
+import com.groupa.digitalbackendapplication.service.CustomerService;
 import com.groupa.digitalbackendapplication.service.OtpService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,11 +27,17 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
-        private final OtpService otpService;
+    private final CustomerService customerService;
+    private final OtpService otpService;
 
     @PostMapping("/create-Admin")
     public ResponseWrapper<AdminCreationResponse> createAdmin(@Valid @RequestBody AdminCreationRequest payload){
         return authService.createAdmin(payload);
+    }
+
+    @PostMapping("/create-personal-account")
+    public ResponseWrapper<AccountCreatedResponse> createPersonalAccount(@RequestBody @Valid CustomerRegistrationRequest payload){
+        return customerService.createPersonalAccount(payload);
     }
 
     @PostMapping(path = "/login")

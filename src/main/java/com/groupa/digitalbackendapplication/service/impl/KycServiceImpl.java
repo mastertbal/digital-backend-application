@@ -45,7 +45,7 @@ public class KycServiceImpl implements KycService {
         AccountTier resultingTier;
         AuthUser loggedInUser = securityUtil.getSecurityPrincipal();
         User user = loggedInUser.getUser();
-        Account account = accountRepository.findByOwnerId(user.getId())
+        Account account = accountRepository.findByCustomerId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         Optional<KycEntity> kycEntity = kycEntityRepository.findByAccountIdAndStatus(account.getId(), KycStatus.PENDING);

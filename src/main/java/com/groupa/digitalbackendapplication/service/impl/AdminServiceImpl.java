@@ -6,7 +6,7 @@ import com.groupa.digitalbackendapplication.domain.dto.request.KycRejectionReque
 import com.groupa.digitalbackendapplication.domain.dto.response.*;
 import com.groupa.digitalbackendapplication.domain.entities.*;
 import com.groupa.digitalbackendapplication.domain.enums.*;
-import com.groupa.digitalbackendapplication.domain.response.Response;
+import com.groupa.digitalbackendapplication.domain.dto.response.Response;
 import com.groupa.digitalbackendapplication.exceptions.BadRequestException;
 import com.groupa.digitalbackendapplication.exceptions.ResourceNotFoundException;
 import com.groupa.digitalbackendapplication.notification.EmailDetails;
@@ -26,7 +26,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -119,19 +118,17 @@ public class AdminServiceImpl implements AdminService {
         Account account = accountRepository.findByAccountNumber(accountNumber)
                 .orElseThrow(()-> new ResourceNotFoundException("Account not found"));
 
-        return customerService.getUserProfileById(account.getOwnerId());
+        return customerService.getUserProfileById(account.getCustomer().getId());
     }
 
     @Override
     public ResponseWrapper<Page<CustomerDto>> getAllCustomer(Pageable pageable) {
-        Page<Account> accountPage = accountRepository.findAll(pageable);
+        Page<Customer> customers = customerRepository.findAll(pageable);
 
-        List<CustomerDto> dtos = buildPageCustomer(accountPage);
-
-        Page<CustomerDto> pageCustomer = new PageImpl<>(dtos, pageable, accountPage.getTotalElements());
+        Page<CustomerDto> dtos = customers.map(this::toDto);
 
         return ResponseWrapper.<Page<CustomerDto>>builder()
-                .data(pageCustomer)
+                .data(dtos)
                 .message("successful")
                 .statusCode(HttpStatus.OK)
                 .build();
@@ -342,7 +339,7 @@ public class AdminServiceImpl implements AdminService {
         account.setUpdatedAt(LocalDateTime.now());
         accountRepository.save(account);
 
-        Customer customer = customerRepository.findById(account.getOwnerId())
+        Customer customer = customerRepository.findById(account.getCustomer().getId())
                 .orElseThrow(()-> new ResourceNotFoundException("Error occurred"));
 
         try {
@@ -384,7 +381,7 @@ public class AdminServiceImpl implements AdminService {
         account.setUpdatedAt(LocalDateTime.now());
         accountRepository.save(account);
 
-        Customer customer = customerRepository.findById(account.getOwnerId())
+        Customer customer = customerRepository.findById(account.getCustomer().getId())
                 .orElseThrow(()-> new ResourceNotFoundException("Error occurred"));
 
         try {
@@ -626,41 +623,41 @@ public class AdminServiceImpl implements AdminService {
 
     }
 
-    private List<CustomerDto> buildPageCustomer(Page<Account> accountPage){
+    private CustomerDto toDto(Customer customer){
 
-        List<Account> accounts = accountPage.getContent();
+        List<AccountDto> accountDTOs = customer.getAccounts().stream()
+                .map(this::buildAccountDto).toList();
 
-        List<CustomerDto> dtos = new ArrayList<>();
+        CustomerDto customerDto = CustomerDto.builder()
+                .id(customer.getId())
+                .firstName(customer.getFirstName())
+                .lastName(customer.getLastName())
+                .email(customer.getEmail())
+                .phoneNumber(customer.getPhoneNumber())
+                .gender(customer.getGender())
+                .dateOfBirth(customer.getDateOfBirth())
+                .role(customer.getRole())
+                .address(customer.getAddress())
+                .nin(encryptionUtil.decrypt(customer.getNin()))
+                .bvn(encryptionUtil.decrypt(customer.getBvn()))
+                .accountDto(accountDTOs)
+                .build();
 
-        for (Account account : accounts) {
-            Customer customer = customerRepository.findById(account.getOwnerId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+        return customerDto;
+    }
 
-            AccountDto accountDto = AccountDto.builder()
-                    .id(account.getId())
-                    .accountNumber(account.getAccountNumber())
-                    .balance(account.getBalance())
-                    .accountTier(account.getAccountTier())
-                    .accountStatus(account.getAccountStatus())
-                    .build();
+    private AccountDto buildAccountDto(Account account){
 
-            CustomerDto customerDto = CustomerDto.builder()
-                    .id(customer.getId())
-                    .firstName(customer.getFirstName())
-                    .lastName(customer.getLastName())
-                    .email(customer.getEmail())
-                    .phoneNumber(customer.getPhoneNumber())
-                    .gender(customer.getGender())
-                    .dateOfBirth(customer.getDateOfBirth())
-                    .role(customer.getRole())
-                    .address(customer.getAddress())
-                    .nin(encryptionUtil.decrypt(customer.getNin()))
-                    .bvn(encryptionUtil.decrypt(customer.getBvn()))
-                    .accountDto(accountDto)
-                    .build();
-            dtos.add(customerDto);
-        }
-        return dtos;
+        AccountDto accountDto = AccountDto.builder()
+                .id(account.getId())
+                .accountNumber(account.getAccountNumber())
+                .balance(account.getBalance())
+                .accountTier(account.getAccountTier())
+                .accountStatus(account.getAccountStatus())
+                .accountType(account.getPersonalAccountType())
+                .build();
+
+        return accountDto;
     }
 
 }
