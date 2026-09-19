@@ -2,7 +2,6 @@ package com.groupa.digitalbackendapplication.domain.entities;
 
 import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
-import com.groupa.digitalbackendapplication.domain.enums.PersonalAccountType;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
@@ -27,9 +26,8 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false)
-    private Customer customer;
+    @Column(name = "owner_id", unique = true, nullable = false)
+    private UUID ownerId;
 
     @Column(name = "account_status", nullable = false, length = 25)
     @Enumerated(value = EnumType.STRING)
@@ -44,10 +42,6 @@ public class Account {
     @Column(name = "account_tier", nullable = false, length = 25)
     @Enumerated(value = EnumType.STRING)
     private AccountTier accountTier;
-
-    @Column(name = "account_type", length = 25)
-    @Enumerated(value = EnumType.STRING)
-    private PersonalAccountType personalAccountType;
 
     @Column(name = "created_at", nullable = false)
     @CreationTimestamp

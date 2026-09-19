@@ -1,10 +1,8 @@
 package com.groupa.digitalbackendapplication.repository;
 
 import com.groupa.digitalbackendapplication.domain.entities.Account;
-import com.groupa.digitalbackendapplication.domain.entities.Customer;
 import com.groupa.digitalbackendapplication.domain.enums.AccountStatus;
 import com.groupa.digitalbackendapplication.domain.enums.AccountTier;
-import com.groupa.digitalbackendapplication.domain.enums.PersonalAccountType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,9 +16,7 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     Optional<Account> findByAccountNumber(String accountNumber);
 
-    Optional<Account> findByCustomerId(UUID customerId);
-
-    Optional<Account> findByCustomerIdAndAccountNumber(UUID customerId, String accountNumber);
+    Optional<Account> findByOwnerId(UUID uuid);
 
     long countAccountByAccountTier(AccountTier accountTier);
 
@@ -28,8 +24,4 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     @Override
     Page<Account> findAll(Pageable pageable);
-
-    Optional<Account> findByCustomerAndPersonalAccountType(Customer customer, PersonalAccountType accountType);
-
-    Optional<Account> findByCustomerIdAndPersonalAccountType(UUID customerId, PersonalAccountType accountType);
 }

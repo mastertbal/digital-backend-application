@@ -8,8 +8,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @Data
@@ -40,5 +38,5 @@ public class CustomerDto {
 
     private String bvn;
 
-    private List<AccountDto> accountDto;
+    private AccountDto accountDto;
 }
